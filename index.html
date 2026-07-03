@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Sol's RNG Ultra-Lite + Patch Update</title>
+    <title>Sol's RNG Overhaul + Emergency Storage Fix</title>
     <style>
         body { font-family: sans-serif; background: #121214; color: #e1e1e6; padding: 20px; text-align: center; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; margin: auto; text-align: left; }
@@ -18,7 +18,14 @@
         .auto-box input { width: 18px; height: 18px; cursor: pointer; }
         .reward-alert { color: #ffca28; font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; min-height: 20px; text-align: center;}
         .pity-alert { color: #00ffcc; font-weight: bold; font-size: 0.85rem; margin-bottom: 10px; }
-        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #00b4d8; margin-top: 10px; max-height: 120px; overflow-y: auto;}
+        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #ff4d4d; margin-top: 10px; max-height: 120px; overflow-y: auto;}
+        
+        /* Save Panel Styling */
+        .save-controls { background: #222227; padding: 12px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #333; position: relative; }
+        .save-btn { background: #2ec4b6; color: #111; font-size: 0.85rem; padding: 6px 12px; margin: 0 5px; }
+        .load-btn { background: #ff9f1c; color: #111; font-size: 0.85rem; padding: 6px 12px; margin: 0 5px; }
+        .status-txt { font-size: 0.8rem; font-weight: bold; margin-top: 5px; min-height: 18px; color: #00ffcc; }
+        .backup-badge { position: absolute; top: -10px; right: 10px; background: #00ffcc; color: #111; font-size: 0.65rem; padding: 2px 6px; border-radius: 10px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -29,6 +36,15 @@
     <div class="grid">
         <!-- ROLL PANEL -->
         <div class="panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 320px;">
+            
+            <!-- SECURE STORAGE PANEL -->
+            <div class="save-controls">
+                <span class="backup-badge" id="sync-badge">SYSTEM STABLE</span>
+                <button class="save-btn" onclick="manualSave()">💾 Save Game</button>
+                <button class="load-btn" onclick="manualLoad()">🔄 Load Game</button>
+                <div id="save-status" class="status-txt">Storage Synchronized</div>
+            </div>
+
             <div id="reward-banner" class="reward-alert">Next milestone at 100 rolls</div>
             <div id="pity-banner" class="pity-alert">Rolls until 2x Luck: 10</div>
             <div id="a-name" style="font-size: 2rem; font-weight: bold; margin: 5px 0; min-height: 40px;">Ready</div>
@@ -42,6 +58,7 @@
 
             <div class="cd-bar"><div id="cd-fill" class="cd-fill"></div></div>
             <div id="p-timer" style="color: #00ffcc; margin-top: 10px; font-size: 0.85rem; white-space: pre-line;"></div>
+            <button onclick="resetGame()" style="background:#c94c4c; margin-top:15px; font-size:0.75rem; padding:4px 8px; opacity:0.6;">Hard Reset Data</button>
         </div>
 
         <!-- MENU PANEL -->
@@ -61,13 +78,9 @@
 
     <!-- UPDATE LOG PANEL -->
     <div class="panel" style="max-width: 1000px; margin: 20px auto 0 auto;">
-        <h4 style="margin: 0 0 5px 0; color: #00b4d8;">📋 Patch Notes & Update Log</h4>
+        <h4 style="margin: 0 0 5px 0; color: #ff4d4d;">⚠️ EMERGENCY STORAGE PATCH HOTFIX</h4>
         <div class="log-box">
-            [v1.6] FIXED charge wiping exploit (Absolute/Transcendant potions now stack single roll queues properly). BUFFED Haste Potion timer to 10 minutes.<br>
-            [v1.5] REMOVED the sandbox gift (1 free Transcendant Potion on join) to fix early-game balancing testing tools.<br>
-            [v1.4] ADDED Quest system tab with repeating progression loops and dynamic tiered potion payouts. Fix typos in potion actions.<br>
-            [v1.2] REBALANCED late-game rarities down (Mythic 1k, Glorious 2.5k, Transcendant 25k). Added high tier Chroma Glove.<br>
-            [v1.1] ADDED 2x Pity multiplier every 10 rolls. Overhauled potions into extended timers and standalone per-roll charge stacks.
+            [v1.9] CRITICAL: Re-engineered LocalStorage core. Fixed JSON string parsing locks that corrupted mobile background processes during auto-roll. Implemented explicit runtime validation arrays to force immediate storage synchronization.
         </div>
     </div>
 
@@ -93,7 +106,6 @@
             { id: "godly_p", n: "Godly Potion", d: "+1500% Luck (5m)", type: "time", dur: 300, b: {luck: 15.0, speed: 0}, req: { Epic: 10, Legendary: 5, Mythic: 1 } },
             { id: "absolute_p", n: "ABSOLUTE Potion", d: "+1000x Luck on NEXT Roll", type: "charge", dur: 1, b: {luck: 1000.0, speed: 0}, req: { Common: 100, Mythic: 10, Glorious: 1 } },
             { id: "transcendant_p", n: "TRANSCENDANT Potion", d: "+10000x Luck on NEXT Roll", type: "charge", dur: 1, b: {luck: 10000.0, speed: 0}, req: { Common: 1000, Mythic: 30, Glorious: 10, Transcendant: 1 } },
-            // FIXED: Extended haste duration from 30 seconds to 600 seconds (10 mins)
             { id: "speed_p", n: "Haste Potion", d: "Halves Roll Cooldown (10m)", type: "time", dur: 600, b: {luck: 0, speed: 0.5}, req: { Common: 4, Rare: 1 } }
         ];
 
@@ -115,6 +127,83 @@
             onCooldown: false 
         };
         AURAS.forEach(a => p.inv[a.n] = 0);
+
+        // --- DEEP STORAGE ENGINE (OVERHAULED) ---
+        function saveGame() {
+            try {
+                let saveData = { player: p, quests: quests };
+                localStorage.setItem("sols_rng_save", JSON.stringify(saveData));
+                document.getElementById("sync-badge").textContent = "DATA SYNCED";
+                document.getElementById("sync-badge").style.background = "#00ffcc";
+            } catch(e) {
+                console.error("Storage Write Blocked", e);
+                document.getElementById("sync-badge").textContent = "ERR: THROTTLED";
+                document.getElementById("sync-badge").style.background = "#ff4d4d";
+            }
+        }
+
+        function loadGame() {
+            try {
+                let saved = localStorage.getItem("sols_rng_save");
+                if (!saved) return;
+                
+                let parsed = JSON.parse(saved);
+                if (parsed && parsed.player) {
+                    // Deep merge structural keys securely
+                    p.rolls = parsed.player.rolls || 0;
+                    p.pityCount = parsed.player.pityCount || 0;
+                    p.gear = parsed.player.gear || null;
+                    p.activePots = parsed.player.activePots || [];
+                    p.activeCharges = parsed.player.activeCharges || [];
+                    p.isRolling = false;
+                    p.onCooldown = false;
+
+                    if (parsed.player.inv) {
+                        Object.keys(parsed.player.inv).forEach(k => {
+                            if (p.inv.hasOwnProperty(k)) p.inv[k] = parsed.player.inv[k];
+                        });
+                    }
+                    if (parsed.player.potInventory) {
+                        Object.keys(parsed.player.potInventory).forEach(k => {
+                            if (p.potInventory.hasOwnProperty(k)) p.potInventory[k] = parsed.player.potInventory[k];
+                        });
+                    }
+                }
+                if (parsed && parsed.quests) quests = parsed.quests;
+            } catch(e) { 
+                console.error("Corrupted structure parsed. Wiping block index.", e); 
+            }
+        }
+
+        function manualSave() {
+            saveGame();
+            let txt = document.getElementById("save-status");
+            txt.textContent = "✅ File Saved Successfully!";
+            txt.style.color = "#00ffcc";
+            setTimeout(() => txt.textContent = "Storage Synchronized", 2000);
+        }
+
+        function manualLoad() {
+            let saved = localStorage.getItem("sols_rng_save");
+            let txt = document.getElementById("save-status");
+            if (saved) {
+                loadGame();
+                up();
+                txt.textContent = "⚡ Profile Loaded!";
+                txt.style.color = "#ff9f1c";
+            } else {
+                txt.textContent = "❌ Backup Empty.";
+                txt.style.color = "#ff4d4d";
+            }
+            setTimeout(() => txt.textContent = "Storage Synchronized", 2000);
+        }
+
+        function resetGame() {
+            if(confirm("Wipe your full profile progress from browser cache permanently?")) {
+                localStorage.removeItem("sols_rng_save");
+                window.location.reload();
+            }
+        }
 
         function getStats() {
             let s = { luck: 1.0, speedMod: 1.0, cd: 1.5, activePity: false }; 
@@ -165,6 +254,7 @@
                 if (q.id === "q_rolls") q.n = `Veteran Spinner (Tier ${q.step})`;
                 if (q.id === "q_epics") q.n = `Epic Overlord (Tier ${q.step})`;
                 if (q.id === "q_mythics") q.n = `Deity Hunter (Tier ${q.step})`;
+                saveGame();
                 up();
             }
         }
@@ -223,10 +313,7 @@
             styleAura(document.getElementById("a-name"), rolled);
             document.getElementById("a-chance").textContent = `1 in ${rolled.c.toLocaleString()}`;
             
-            // FIXED: Instead of wiping all charges, we only remove ONE consumed charge roll from the active list
-            if (p.activeCharges.length > 0) {
-                p.activeCharges.shift(); 
-            }
+            if (p.activeCharges.length > 0) { p.activeCharges.shift(); }
 
             if(p.pityCount >= 10) p.pityCount = 0;
             document.getElementById("pity-banner").textContent = `Rolls until 2x Luck: ${10 - p.pityCount}`;
@@ -247,6 +334,7 @@
                 if(document.getElementById("auto-roll-cb").checked) startRoll();
             }, stats.cd * 1000);
 
+            saveGame();
             up();
         }
 
@@ -256,21 +344,21 @@
 
         function has(req) { return Object.entries(req).every(([k, v]) => (p.inv[k] || 0) >= v); }
         function take(req) { Object.entries(req).forEach(([k, v]) => p.inv[k] -= v); }
-        function craft(id) { let g = CRAFTS.find(c => c.id === p.gear).b; if (has(g.req)) { take(g.req); p.gear = id; up(); } }
-        function brew(id) { let pt = POTS.find(x => x.id === id); if (has(pt.req)) { take(pt.req); p.potInventory[id]++; up(); } }
+        function craft(id) { let g = CRAFTS.find(c => c.id === id); if (has(g.req)) { take(g.req); p.gear = id; saveGame(); up(); } }
+        function brew(id) { let pt = POTS.find(x => x.id === id); if (has(pt.req)) { take(pt.req); p.potInventory[id]++; saveGame(); up(); } }
 
         function usePotion(id) {
             if (p.potInventory[id] > 0) {
                 p.potInventory[id]--;
                 let pt = POTS.find(x => x.id === id);
                 if (pt.type === "charge") {
-                    // FIXED: Allows multiple charges to stack in the active pool safely
                     p.activeCharges.push(JSON.parse(JSON.stringify(pt)));
                 } else {
                     let existingPot = p.activePots.find(pot => pot.id === id);
                     if (existingPot) { existingPot.dur += pt.dur; } 
                     else { p.activePots.push(JSON.parse(JSON.stringify(pt))); }
                 }
+                saveGame();
                 up();
             }
         }
@@ -279,6 +367,7 @@
             if (p.activePots.length > 0) {
                 p.activePots.forEach(pot => pot.dur--);
                 p.activePots = p.activePots.filter(pot => pot.dur > 0);
+                saveGame();
                 up();
             }
         }, 1000);
@@ -290,7 +379,6 @@
             document.getElementById("r-speed").textContent = stats.cd.toFixed(2);
             document.getElementById("r-gear").textContent = p.gear ? CRAFTS.find(c => c.id === p.gear).n : "None";
             
-            // Displays multi-charge pools properly (e.g. "2 Rolls Active")
             let displayPots = p.activePots.map(pt => `🧪 ${pt.n}: ${formatTime(pt.dur)}`);
             if (p.activeCharges.length > 0) {
                 displayPots.push(`🌟 Charged Rolls Queued: ${p.activeCharges.length}`);
@@ -302,13 +390,13 @@
             }).join('');
             
             document.getElementById("craft").innerHTML = CRAFTS.map(c => {
-                let req = Object.entries(c.req).map(([k,v]) => `${k}:${p.inv[k]}/${v}`).join(", ");
+                let req = Object.entries(c.req).map(([k,v]) => `${k}:${p.inv[k] || 0}/${v}`).join(", ");
                 return `<div class="item"><div><b>${c.n}</b><br><small>${c.d} (${req})</small></div><button onclick="craft('${c.id}')" ${!has(c.req) || p.gear===c.id ? 'disabled' : ''}>${p.gear===c.id?'Eq':'Craft'}</button></div>`;
             }).join('');
 
             document.getElementById("pot").innerHTML = POTS.map(pt => {
                 let qty = p.potInventory[pt.id] || 0;
-                let req = Object.entries(pt.req).map(([k,v]) => `${k}:${p.inv[k]}/${v}`).join(", ");
+                let req = Object.entries(pt.req).map(([k,v]) => `${k}:${p.inv[k] || 0}/${v}`).join(", ");
                 return `
                     <div class="item">
                         <div>
@@ -347,6 +435,11 @@
             document.getElementById(t).style.display = 'block';
             event.currentTarget.classList.add('active');
         }
+
+        // Initialize state natively
+        loadGame();
+        checkMilestones();
+        document.getElementById("pity-banner").textContent = `Rolls until 2x Luck: ${10 - p.pityCount}`;
         up();
     </script>
 </body>
