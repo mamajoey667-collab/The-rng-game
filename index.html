@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sol's RNG Overhaul - Solar & Chromatic Update</title>
+    <title>Sol's RNG Overhaul - Hotfix Matrix</title>
     <style>
         body { font-family: sans-serif; background: #121214; color: #e1e1e6; padding: 20px; text-align: center; transition: background 0.5s ease; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; margin: auto; text-align: left; }
@@ -153,8 +153,8 @@
         } catch (err) { console.error("Firebase Initialization Failed: ", err); }
 
         const PATCH_NOTES = [
-            "[v7.2 CONTENT] Added missing Solar (1/5,000) and Chromatic (1/15,000) auras. Added Solar Gauntlet and Chromatic Gauntlet to crafting blueprints. Patched CSS gradient text rendering bugs for cross-browser compatibility.",
-            "[v7.1 HOTFIX] Fixed structural biome loop locks. Patched dynamic aura generation conditionals to process drop tables across changing environments correctly. Implemented safe configuration migrations for local database objects."
+            "[v7.1 HOTFIX] Fixed structural biome loop locks. Patched dynamic aura generation conditionals to process drop tables across changing environments correctly. Implemented safe configuration migrations for local database objects.",
+            "[v7.0] MULTIPLAYER & EXCLUSIVE BIOMES UPDATE: Wiped simulated NPC telemetry loops completely. Connected structural data frameworks to global Firebase cloud databases. Added full user identification nickname tracking mechanics to facilitate persistent profile syncs across live player leaderboards."
         ];
 
         const AURAS = [
@@ -165,8 +165,6 @@
             { n: "Legendary", c: 200, col: "#f72585" }, 
             { n: "Mythic", c: 1000, col: "#b5179e" }, 
             { n: "Glorious", c: 2500, col: "linear-gradient(45deg, #ffca28, #f72585)" },
-            { n: "Solar", c: 5000, col: "linear-gradient(90deg, #ff9f1c, #ffbf69)" }, // Added Solar
-            { n: "Chromatic", c: 15000, col: "linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)" }, // Added Chromatic
             { n: "Water", c: 50, col: "#00b4d8", biome: "Rainy" },
             { n: "Gloomy", c: 250, col: "#5c677d", biome: "Rainy" },
             { n: "Stormy", c: 2500, col: "#ff9f1c", biome: "Rainy" },
@@ -178,10 +176,7 @@
 
         const CRAFTS = [
             { id: "glove", n: "Luck Glove", d: "+50% Luck", b: {luck: 0.5, speed: 0}, req: { Common: 5, Uncommon: 3 } },
-            { id: "cauldron", n: "Alchemist Cauldron", d: "Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose auras.", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } },
-            // Added Solar and Chromatic Gauntlets
-            { id: "solar_gauntlet", n: "Solar Gauntlet", d: "+150% Luck, -15% Cooldown Time", b: {luck: 1.5, speed: 0.15}, req: { Solar: 1, Epic: 10, Legendary: 3 } },
-            { id: "chromatic_gauntlet", n: "Chromatic Gauntlet", d: "+300% Luck, -30% Cooldown Time", b: {luck: 3.0, speed: 0.30}, req: { Chromatic: 1, Glorious: 2, Mythic: 5 } }
+            { id: "cauldron", n: "Alchemist Cauldron", d: "Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose auras.", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } }
         ];
 
         const POTS = [
@@ -285,7 +280,6 @@
                 let parsed = JSON.parse(decodeURIComponent(atob(data.trim())));
                 if (parsed?.player) {
                     p = parsed.player; if (parsed.quests) quests = parsed.quests;
-                    // Safely initialize missing new auras to prevent save corruption
                     AURAS.forEach(a => { if(p.inv[a.n] === undefined) p.inv[a.n] = 0; });
                     saveGame(); syncDatabaseProfile(); window.location.reload();
                 }
@@ -306,7 +300,6 @@
                 let parsed = JSON.parse(saved);
                 if (parsed?.player) {
                     Object.assign(p, parsed.player);
-                    // Force inject missing items upon loading an older save version
                     AURAS.forEach(a => { if(p.inv[a.n] === undefined) p.inv[a.n] = 0; });
                     DOM.fCom.checked = !!p.filters.Common; DOM.fUnc.checked = !!p.filters.Uncommon; DOM.fRare.checked = !!p.filters.Rare;
                 }
@@ -328,20 +321,10 @@
         function styleAura(el, name) {
             let a = AURAS.find(x => x.n === name) || { n: "None", col: "#aaa" }; el.textContent = a.n;
             let isGrad = a.col.includes("linear-gradient");
-            
-            // Comprehensive bug fix for cross-browser gradient rendering
             if (isGrad) {
-                el.style.background = a.col; 
-                el.style.webkitBackgroundClip = "text"; 
-                el.style.webkitTextFillColor = "transparent";
-                el.style.backgroundClip = "text";
-                el.style.color = "transparent";
+                el.style.background = a.col; el.style.webkitBackgroundClip = "text"; el.style.webkitTextFillColor = "transparent";
             } else {
-                el.style.background = "none"; 
-                el.style.webkitBackgroundClip = "initial"; 
-                el.style.webkitTextFillColor = "initial"; 
-                el.style.backgroundClip = "initial";
-                el.style.color = a.col;
+                el.style.background = "none"; el.style.webkitBackgroundClip = "initial"; el.style.webkitTextFillColor = "initial"; el.style.color = a.col;
             }
         }
 
