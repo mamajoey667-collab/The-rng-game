@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sol's RNG Overhaul</title>
+    <title>Sol's RNG Overhaul - Super Massive Update</title>
     <style>
-        body { font-family: sans-serif; background: #121214; color: #e1e1e6; padding: 20px; text-align: center; }
+        body { font-family: sans-serif; background: #121214; color: #e1e1e6; padding: 20px; text-align: center; transition: background 0.5s ease; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; margin: auto; text-align: left; }
-        .panel { background: #1a1a1e; padding: 15px; border-radius: 8px; border: 1px solid #2e2e35; }
+        .panel { background: #1a1a1e; padding: 15px; border-radius: 8px; border: 1px solid #2e2e35; position: relative; }
         button { background: #6200ee; color: #fff; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
         button:disabled { background: #444; cursor: not-allowed; }
         .item { background: #252529; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
         .tabs button { background: none; color: #aaa; margin-right: 10px; padding: 5px; }
         .tabs button.active { color: #fff; border-bottom: 2px solid #6200ee; }
-        .tab-content { display: none; max-height: 420px; overflow-y: auto; margin-top: 10px; }
+        .tab-content { display: none; max-height: 460px; overflow-y: auto; margin-top: 10px; }
         .cd-bar { width: 100%; background: #333; height: 4px; margin-top: 10px; border-radius: 2px; overflow: hidden; }
         .cd-fill { height: 100%; background: #6200ee; width: 0%; transition: width linear; }
         .auto-box { margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: bold; }
@@ -20,7 +20,7 @@
         .auto-box input { width: 16px; height: 16px; cursor: pointer; }
         .reward-alert { color: #ffca28; font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; min-height: 20px; text-align: center;}
         .pity-alert { color: #00ffcc; font-weight: bold; font-size: 0.85rem; margin-bottom: 10px; }
-        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #6200ee; margin-top: 10px; max-height: 220px; overflow-y: auto; white-space: pre-line; line-height: 1.4; }
+        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #6200ee; margin-top: 10px; max-height: 180px; overflow-y: auto; white-space: pre-line; line-height: 1.4; }
         .status-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .status-label { font-size: 0.8rem; font-weight: bold; color: #aaa; }
         .backup-badge { background: #00ffcc; color: #111; font-size: 0.65rem; padding: 3px 8px; border-radius: 10px; font-weight: bold; letter-spacing: 0.5px; }
@@ -29,16 +29,30 @@
         .filter-title { font-weight: bold; color: #ff4a4a; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;}
         .filter-options { display: flex; gap: 10px; flex-wrap: wrap; }
         .inv-section-title { font-size: 0.8rem; font-weight: bold; color: #6200ee; letter-spacing: 1px; margin: 15px 0 5px 0; border-bottom: 1px dashed #333; padding-bottom: 3px; text-transform: uppercase;}
+        
+        /* New Overhaul UI Elements */
+        .biome-banner { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #444; font-size: 0.9rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; text-transform: uppercase; margin-left: 5px; }
+        .title-badge { color: #ffca28; font-weight: bold; margin-right: 5px; font-family: monospace; }
+        .stats-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
+        .stats-table td { padding: 6px 4px; border-bottom: 1px solid #2e2e35; }
+        .leaderboard-row { display: flex; justify-content: space-between; padding: 6px; margin: 4px 0; border-radius: 4px; font-size: 0.85rem; background: #222227; }
+        .player-row { border: 1px solid #6200ee; background: rgba(98, 0, 238, 0.15); font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h2>Sol's RNG Overhaul</h2>
-    <p>Rolls: <span id="r-count">0</span> | Luck: <span id="r-luck">1.0</span>x | CD: <span id="r-speed">1.5</span>s | Gear: <span id="r-gear">None</span></p>
+    <div class="biome-banner" id="biome-container">
+        <div>🌍 Current Biome: <span id="env-biome" style="color: #6dff84;">Normal</span> <small id="env-biome-boost" style="color: #aaa; font-weight: normal;"></small></div>
+        <div>☁️ Weather: <span id="env-weather" style="color: #4cc9f0;">Clear</span></div>
+    </div>
+
+    <h2><span id="player-title" class="title-badge"></span>Sol's RNG Overhaul</h2>
+    <p>Rolls: <span id="r-count">0</span> | Luck: <span id="r-luck">1.0</span>x | CD: <span id="r-speed">1.5</span>s | Gear: <span id="r-gear">None</span> | Prestige: <span id="r-prestige" style="color:#ffca28;">0</span></p>
     <p style="font-size: 0.9rem; margin-top: -10px; color: #aaa;">Equipped Aura: <span id="r-equipped" style="font-weight: bold;">None</span></p>
 
     <div class="grid">
-        <div class="panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 340px;">
+        <div class="panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 360px;">
             <div class="status-panel">
                 <span class="status-label">CLOUD SYNC ENGINE</span>
                 <span class="backup-badge" id="sync-badge">DATA SECURE</span>
@@ -57,7 +71,9 @@
             <div class="cd-bar"><div id="cd-fill" class="cd-fill"></div></div>
             <div id="p-timer" style="color: #00ffcc; margin-top: 10px; font-size: 0.85rem; white-space: pre-line;"></div>
             <div id="cauldron-alert" style="color: #ff9f1c; font-size: 0.75rem; font-weight: bold; margin-top: 5px;"></div>
-            <button onclick="resetGame()" style="background:#c94c4c; margin-top:25px; font-size:0.75rem; padding:4px 8px; opacity:0.4; border-radius: 4px;">Hard Reset Data</button>
+            
+            <div style="margin-top: 15px;" id="prestige-zone"></div>
+            <button onclick="resetGame()" style="background:#c94c4c; margin-top:20px; font-size:0.75rem; padding:4px 8px; opacity:0.4; border-radius: 4px;">Hard Reset Data</button>
         </div>
 
         <div class="panel">
@@ -66,6 +82,7 @@
                 <button data-tab="craft" class="t-btn">Blueprints</button>
                 <button data-tab="pot" class="t-btn">Alchemy Hub</button>
                 <button data-tab="quests" class="t-btn" style="color: #ffca28;">Quests</button>
+                <button data-tab="stats-panel" class="t-btn" style="color: #00ffcc;">Rankings</button>
             </div>
             
             <div id="inv" class="tab-content" style="display: block;">
@@ -95,6 +112,19 @@
             <div id="craft" class="tab-content"></div>
             <div id="pot" class="tab-content"></div>
             <div id="quests" class="tab-content"></div>
+            
+            <!-- Rankings & Stats Tab Pane -->
+            <div id="stats-panel" class="tab-content">
+                <div class="inv-section-title">🏆 Simulated Live Leaderboards</div>
+                <div id="leaderboard-container"></div>
+                
+                <div class="inv-section-title">📊 Lifetime Detailed Metrics</div>
+                <table class="stats-table">
+                    <tr><td>Total Time Active:</td><td id="stat-time" style="text-align:right; font-weight:bold;">0s</td></tr>
+                    <tr><td>Luckiest Roll Ever:</td><td id="stat-lucky" style="text-align:right; font-weight:bold; color:#ffca28;">None</td></tr>
+                    <tr><td>Total Potions Consumed:</td><td id="stat-pots" style="text-align:right; font-weight:bold;">0</td></tr>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -105,6 +135,7 @@
 
     <script>
         const PATCH_NOTES = [
+            "[v6.0] SUPER MASSIVE EXPANSION: Integrated complete Worlds, Biomes & Environment modification systems. Added dynamic weather states impacting roll mechanics globally. Introduced full prestige reset mechanics with localized base multiplier updates, customized character chat title scaling tiers, an NPC automated simulator ranking leaderboard matrix, and long-term lifetime historical stat collection modules.",
             "[v5.1] SYSTEM PATCH: Cleaned up UI inside Alchemy Hub by wiping duplicate aura requirement text lines for tier-fused potions. Synced historical repository log records.",
             "[v5.0] VAULT ENGINE REWORK: Completely split old inventory arrays into three segmented sub-vault pipelines: Auras Owned, Potions Held, and Gears Crafted. Altered Blueprints to restrict gear items to unique 1-time crafts and integrated full manual armory equipment selection loops.",
             "[v4.0] THE ALCHEMY UPDATE: Implemented multi-tier alchemy fusion mechanics, permitting common components to be merged directly up into rare configurations. Rolled out craftable 'Alchemist Cauldron' gear infrastructure.",
@@ -117,8 +148,8 @@
             { n: "Common", c: 2, col: "#fff" }, { n: "Uncommon", c: 5, col: "#82ff7a" },
             { n: "Rare", c: 15, col: "#4cc9f0" }, { n: "Epic", c: 50, col: "#4361ee" },
             { n: "Legendary", c: 200, col: "#f72585" }, { n: "Mythic", c: 1000, col: "#b5179e" }, 
-            { n: "Glorious", c: 2500, col: "linear-gradient(45deg, #ffca28, #f72585)" }, { n: "Solar", c: 5000, col: "#f9c74f" }, 
-            { n: "CHROMATIC", c: 15000, col: "linear-gradient(90deg, red, blue)" }, { n: "Transcendant", c: 25000, col: "linear-gradient(90deg, #00f5d4, #7b2cbf, #00b4d8)" }
+            { n: "Glorious", c: 2500, col: "linear-gradient(45deg, #ffca28, #f72585)" }, { n: "Solar", c: 5000, col: "#f9c74f", biome: "Space" }, 
+            { n: "CHROMATIC", c: 15000, col: "linear-gradient(90deg, red, blue)", biome: "Deep Sea" }, { n: "Transcendant", c: 25000, col: "linear-gradient(90deg, #00f5d4, #7b2cbf, #00b4d8)", biome: "Hell" }
         ];
 
         const CRAFTS = [
@@ -138,6 +169,26 @@
             { id: "speed_p", n: "Haste Potion", d: "Halves Roll Cooldown (10m)", type: "time", dur: 600, b: {luck: 0, speed: 0.5}, req: { Common: 4, Rare: 1 }, fuseFrom: null }
         ];
 
+        const BIOMES = [
+            { n: "Normal", bg: "#121214", border: "#2e2e35", desc: "No baseline drop changes" },
+            { n: "Hell", bg: "#2d1111", border: "#ff4a4a", desc: "Transcendant is 5x more common!" },
+            { n: "Deep Sea", bg: "#0d1b2a", border: "#4cc9f0", desc: "CHROMATIC is 5x more common!" },
+            { n: "Space", bg: "#1a0b2e", border: "#b5179e", desc: "Solar is 5x more common!" }
+        ];
+
+        const WEATHER = [
+            { n: "Clear", bLuck: 1.0, bSpd: 1.0 },
+            { n: "Rain", bLuck: 1.0, bSpd: 0.75 }, // 25% faster roll intervals
+            { n: "Eclipse", bLuck: 2.0, bSpd: 1.0 } // Double luck values global
+        ];
+
+        let simulatedLeaderboards = [
+            { name: "AuraKing_99", rolls: 84300, title: "[Dedicated]" },
+            { name: "RNGesus_Child", rolls: 52100, title: "[Dedicated]" },
+            { name: "LuckyClicker", rolls: 18400, title: "[Novice]" },
+            { name: "SolsDisciple", rolls: 4200, title: "[Novice]" }
+        ];
+
         let quests = [
             { id: "q_rolls", n: "Novice Spinner", desc: "Total rolls executed", target: 50, reward: { speed_p: 2 }, progress: 0, step: 1 },
             { id: "q_epics", n: "Epic Collector", desc: "Collect Epic or better auras", target: 5, reward: { ultra_luck_p: 1 }, progress: 0, step: 1 },
@@ -148,11 +199,14 @@
             rolls: 0, pityCount: 0, inv: {}, 
             potInventory: { luck_p: 0, super_luck_p: 0, ultra_luck_p: 0, godly_p: 0, absolute_p: 0, transcendant_p: 0, speed_p: 0 }, 
             craftedGears: [], gear: null, activePots: [], activeCharges: [], isRolling: false, onCooldown: false,
-            equippedAura: "None", filters: { Common: false, Uncommon: false, Rare: false }, cauldronProgress: 0
+            equippedAura: "None", filters: { Common: false, Uncommon: false, Rare: false }, cauldronProgress: 0,
+            prestige: 0, totalSeconds: 0, luckiestChance: 0, luckiestName: "None", totalPotionsUsed: 0
         };
         AURAS.forEach(a => p.inv[a.n] = 0);
 
-        // Cached Selector Engine
+        let currentBiomeIndex = 0;
+        let currentWeatherIndex = 0;
+
         const DOM = {
             count: document.getElementById("r-count"), luck: document.getElementById("r-luck"), speed: document.getElementById("r-speed"),
             gear: document.getElementById("r-gear"), equipped: document.getElementById("r-equipped"), banner: document.getElementById("reward-banner"),
@@ -161,11 +215,15 @@
             timer: document.getElementById("p-timer"), cauldron: document.getElementById("cauldron-alert"), sync: document.getElementById("sync-badge"),
             fCom: document.getElementById("f-common"), fUnc: document.getElementById("f-uncommon"), fRare: document.getElementById("f-rare"),
             invAuras: document.getElementById("inv-auras-list"), invPots: document.getElementById("inv-potions-list"), invGears: document.getElementById("inv-gears-list"),
-            craft: document.getElementById("craft"), pot: document.getElementById("pot"), quests: document.getElementById("quests")
+            craft: document.getElementById("craft"), pot: document.getElementById("pot"), quests: document.getElementById("quests"),
+            prestige: document.getElementById("r-prestige"), prestigeZone: document.getElementById("prestige-zone"), playerTitle: document.getElementById("player-title"),
+            biome: document.getElementById("env-biome"), weather: document.getElementById("env-weather"), biomeBoost: document.getElementById("env-biome-boost"),
+            statTime: document.getElementById("stat-time"), statLucky: document.getElementById("stat-lucky"), statPots: document.getElementById("stat-pots"),
+            leaderboard: document.getElementById("leaderboard-container")
         };
 
         function exportSave() {
-            try { prompt("📋 COPY YOUR SAVE STRING PROFILE BELOW:", btoa(encodeURIComponent(JSON.stringify({ player: p, quests })))); } catch (e) {}
+            try { prompt("📋 COPY YOUR SAVE STRING PROFILE BELOW:", btoa(encodeURIComponent(JSON.stringify({ player: p, quests, simulatedLeaderboards })))); } catch (e) {}
         }
 
         function importSave() {
@@ -174,8 +232,12 @@
                 let parsed = JSON.parse(decodeURIComponent(atob(data.trim())));
                 if (parsed?.player) {
                     p = parsed.player; if (parsed.quests) quests = parsed.quests;
+                    if (parsed.simulatedLeaderboards) simulatedLeaderboards = parsed.simulatedLeaderboards;
                     p.craftedGears = p.craftedGears || (p.gear ? [p.gear] : []);
                     p.cauldronProgress = p.cauldronProgress || 0;
+                    p.prestige = p.prestige || 0; p.totalSeconds = p.totalSeconds || 0;
+                    p.luckiestChance = p.luckiestChance || 0; p.luckiestName = p.luckiestName || "None";
+                    p.totalPotionsUsed = p.totalPotionsUsed || 0;
                     DOM.fCom.checked = p.filters?.Common || false; DOM.fUnc.checked = p.filters?.Uncommon || false; DOM.fRare.checked = p.filters?.Rare || false;
                     saveGame(); up(); alert("✅ Profile successfully migrated and loaded!");
                 }
@@ -187,29 +249,36 @@
         }
 
         function saveGame() {
-            try { localStorage.setItem("sols_rng_save", JSON.stringify({ player: p, quests })); DOM.sync.style.background = "#00ffcc"; DOM.sync.textContent = "DATA SECURE"; } catch(e) {}
+            try { localStorage.setItem("sols_rng_massive_save", JSON.stringify({ player: p, quests, simulatedLeaderboards })); DOM.sync.style.background = "#00ffcc"; DOM.sync.textContent = "DATA SECURE"; } catch(e) {}
         }
 
         function loadGame() {
             try {
-                let saved = localStorage.getItem("sols_rng_save"); if (!saved) return;
+                let saved = localStorage.getItem("sols_rng_massive_save"); if (!saved) return;
                 let parsed = JSON.parse(saved);
                 if (parsed?.player) {
                     Object.assign(p, parsed.player); p.craftedGears = p.craftedGears || (p.gear ? [p.gear] : []);
                     DOM.fCom.checked = !!p.filters.Common; DOM.fUnc.checked = !!p.filters.Uncommon; DOM.fRare.checked = !!p.filters.Rare;
                 }
                 if (parsed?.quests) quests = parsed.quests;
+                if (parsed?.simulatedLeaderboards) simulatedLeaderboards = parsed.simulatedLeaderboards;
             } catch(e) {}
         }
 
-        function resetGame() { if(confirm("Permanently wipe profile data?")) { localStorage.removeItem("sols_rng_save"); window.location.reload(); } }
+        function resetGame() { if(confirm("Permanently wipe profile data?")) { localStorage.removeItem("sols_rng_massive_save"); window.location.reload(); } }
 
         function getStats() {
-            let s = { luck: 1.0, speedMod: 1.0, cd: 1.5 }, found = CRAFTS.find(c => c.id === p.gear);
+            let s = { luck: 1.0 + (p.prestige * 0.25), speedMod: 1.0, cd: 1.5 }, found = CRAFTS.find(c => c.id === p.gear);
             if (found) { s.luck += found.b.luck; if(found.b.speed) s.speedMod *= (1 - found.b.speed); }
             p.activePots.forEach(pot => { s.luck += pot.b.luck; if(pot.b.speed) s.speedMod *= pot.b.speed; });
             p.activeCharges.forEach(pot => s.luck += pot.b.luck);
             if (p.pityCount === 9) s.luck *= 2;
+            
+            // Integrate environmental weather adjustments
+            let w = WEATHER[currentWeatherIndex];
+            s.luck *= w.bLuck;
+            s.speedMod *= w.bSpd;
+
             s.cd *= s.speedMod; return s;
         }
 
@@ -218,6 +287,23 @@
             let isGrad = a.col.includes("grad"); el.style.background = isGrad ? a.col : "none";
             el.style.webkitBackgroundClip = isGrad ? "text" : "initial"; el.style.webkitTextFillColor = isGrad ? "transparent" : "initial";
             if (!isGrad) el.style.color = a.col;
+        }
+
+        function getTitle(rolls) {
+            if (rolls >= 100000) return "[Ascended]";
+            if (rolls >= 50000) return "[Mythic]";
+            if (rolls >= 10000) return "[Dedicated]";
+            return "[Novice]";
+        }
+
+        function executePrestige() {
+            if (p.rolls >= 10000) {
+                if (confirm("Are you ready to Prestige? Your roll counter will reset to 0, but you will unlock a permanent +25% luck bonus!")) {
+                    p.prestige++; p.rolls = 0; p.pityCount = 0;
+                    AURAS.forEach(a => p.inv[a.n] = 0);
+                    p.equippedAura = "None"; saveGame(); up();
+                }
+            }
         }
 
         function trackQuestProgress(type, amt, val = 0) {
@@ -255,13 +341,20 @@
 
         function executeRoll() {
             p.rolls++; p.pityCount++; trackQuestProgress("roll", 1);
-            let stats = getStats(), rolled = AURAS[0];
+            let stats = getStats(), rolled = AURAS[0], curBio = BIOMES[currentBiomeIndex].n;
+            
             for (let i = AURAS.length - 1; i >= 0; i--) {
-                if ((AURAS[i].c / stats.luck) <= 1 || Math.random() < (1 / (AURAS[i].c / stats.luck))) { rolled = AURAS[i]; break; }
+                let checkRarity = AURAS[i].c;
+                if (AURAS[i].biome && AURAS[i].biome === curBio) { checkRarity /= 5; } // 5x Biome drop rate boost
+                
+                if ((checkRarity / stats.luck) <= 1 || Math.random() < (1 / (checkRarity / stats.luck))) { rolled = AURAS[i]; break; }
             }
+            
             if (p.filters[rolled.n]) { DOM.chance.textContent = `🗑️ Auto-Deleted (1 in ${rolled.c.toLocaleString()})`; } 
             else { p.inv[rolled.n]++; DOM.chance.textContent = `1 in ${rolled.c.toLocaleString()}`; }
             
+            if (rolled.c > p.luckiestChance) { p.luckiestChance = rolled.c; p.luckiestName = rolled.n; }
+
             if (p.gear === "cauldron" && ++p.cauldronProgress >= 50) {
                 p.cauldronProgress = 0;
                 if (p.inv.Common >= 3 && p.inv.Uncommon >= 1) {
@@ -289,25 +382,74 @@
 
         function usePotion(id) {
             if (p.potInventory[id] > 0) {
-                p.potInventory[id]--; let pt = POTS.find(x => x.id === id);
+                p.potInventory[id]--; p.totalPotionsUsed++; let pt = POTS.find(x => x.id === id);
                 if (pt.type === "charge") p.activeCharges.push(JSON.parse(JSON.stringify(pt)));
                 else { let e = p.activePots.find(x => x.id === id); if (e) e.dur += pt.dur; else p.activePots.push(JSON.parse(JSON.stringify(pt))); }
                 saveGame(); up();
             }
         }
 
-        setInterval(() => { if (p.activePots.length) { p.activePots.forEach(x => x.dur--); p.activePots = p.activePots.filter(x => x.dur > 0); saveGame(); up(); } }, 1000);
+        // Environment Rotation Engine (Every 30 seconds)
+        setInterval(() => {
+            currentBiomeIndex = (currentBiomeIndex + 1) % BIOMES.length;
+            if (Math.random() < 0.4) { currentWeatherIndex = Math.floor(Math.random() * WEATHER.length); } 
+            else { currentWeatherIndex = 0; }
+            
+            let b = BIOMES[currentBiomeIndex];
+            document.body.style.background = b.bg;
+            document.querySelectorAll('.panel').forEach(el => el.style.borderColor = b.border);
+            saveGame(); up();
+        }, 30000);
+
+        // Core Game Engine Systems Clock
+        setInterval(() => { 
+            p.totalSeconds++;
+            if (p.activePots.length) { p.activePots.forEach(x => x.dur--); p.activePots = p.activePots.filter(x => x.dur > 0); }
+            
+            // Automated NPC Leaderboard Roll Multipliers
+            simulatedLeaderboards.forEach(npc => {
+                npc.rolls += Math.floor(Math.random() * 3) + 1;
+                npc.title = getTitle(npc.rolls);
+            });
+            saveGame(); up(); 
+        }, 1000);
 
         function up() {
             let stats = getStats(), activeGear = CRAFTS.find(c => c.id === p.gear);
             DOM.count.textContent = p.rolls; DOM.luck.textContent = stats.luck.toFixed(1); DOM.speed.textContent = stats.cd.toFixed(2);
             DOM.gear.textContent = activeGear ? activeGear.n : "None"; DOM.pity.textContent = `Rolls until 2x Luck: ${10 - p.pityCount}`;
+            DOM.prestige.textContent = p.prestige;
+            
+            let myTitle = getTitle(p.rolls);
+            DOM.playerTitle.textContent = myTitle + " ";
+
+            if (p.rolls >= 10000) {
+                DOM.prestigeZone.innerHTML = `<button onclick="executePrestige()" style="background:#ffca28; color:#111; animation: pulse 1.5s infinite;">✨ ASCEND PRESTIGE NOW</button>`;
+            } else { DOM.prestigeZone.innerHTML = ""; }
+
+            // Apply active environment feedback
+            let b = BIOMES[currentBiomeIndex]; let w = WEATHER[currentWeatherIndex];
+            DOM.biome.textContent = b.n; DOM.biomeBoost.textContent = `(${b.desc})`; DOM.weather.textContent = w.n;
+            
+            // Build Dynamic Metric Rows
+            DOM.statTime.textContent = formatTime(p.totalSeconds);
+            DOM.statPots.textContent = p.totalPotionsUsed;
+            DOM.statLucky.textContent = p.luckiestName !== "None" ? `${p.luckiestName} (1 in ${p.luckiestChance.toLocaleString()})` : "None";
+
+            // Build Simulated Leaderboard Rankings Layout
+            let list = [...simulatedLeaderboards, { name: "You (Player)", rolls: p.rolls, title: myTitle, isMe: true }];
+            list.sort((x, y) => y.rolls - x.rolls);
+            DOM.leaderboard.innerHTML = list.map((user, idx) => `
+                <div class="leaderboard-row ${user.isMe ? 'player-row' : ''}">
+                    <span>#${idx + 1} <small style="color:#ffca28; font-family:monospace;">${user.title}</small> <b>${user.name}</b></span>
+                    <span>${user.rolls.toLocaleString()} rolls</span>
+                </div>`).join('');
+
             if (p.equippedAura !== "None" && !p.inv[p.equippedAura]) p.equippedAura = "None"; styleAura(DOM.equipped, p.equippedAura);
             DOM.banner.textContent = p.rolls < 100 ? `Next milestone: Basic Chest at 100 rolls (${100 - p.rolls} left)` : p.rolls < 500 ? `Next milestone: Advanced Chest at 500 rolls (${500 - p.rolls} left)` : "All milestones achieved!";
             
             let displayPots = p.activePots.map(pt => `🧪 ${pt.n}: ${formatTime(pt.dur)}`); if (p.activeCharges.length) displayPots.push(`🌟 Charged Rolls Queued: ${p.activeCharges.length}`); DOM.timer.innerHTML = displayPots.join("<br>");
 
-            // Optimizing Loop Sub-Vault Layout Renders
             let visibleAuras = AURAS.filter(a => p.inv[a.n] > 0);
             DOM.invAuras.innerHTML = visibleAuras.length ? visibleAuras.map(a => { let eq = p.equippedAura === a.n; return `<div class="item"><div><b style="color:${a.col.includes('grad') ? '#fff' : a.col}">${a.n}</b><br><small style="color:#aaa;">Rarity: 1 in ${a.c.toLocaleString()}</small></div><div style="display:flex; gap:10px; align-items:center;"><b>x${p.inv[a.n]}</b><button onclick="toggleEquip('${a.n}')" style="background:${eq ? '#c94c4c' : '#00b4d8'}; padding:4px 8px; font-size:0.75rem;">${eq ? 'Unequip' : 'Equip'}</button></div></div>`; }).join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No auras collected yet.</div>';
             
