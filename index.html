@@ -25,7 +25,7 @@
         .backup-badge { background: #00ffcc; color: #111; font-size: 0.65rem; padding: 3px 8px; border-radius: 10px; font-weight: bold; letter-spacing: 0.5px; }
         
         /* Save Export/Import styling */
-        .save-tools { border-top: 1px solid #333; padding-top: 10px; margin-top: 10px; display: flex; gap: 5px; flex-direction: column; }
+        .save-tools { border-top: 1px solid #333; padding-top: 10px; margin-top: 15px; display: flex; gap: 8px; flex-direction: column; }
     </style>
 </head>
 <body>
@@ -62,8 +62,8 @@
             <div id="inv" class="tab-content" style="display: block;">
                 <div id="inv-list"></div>
                 <div class="save-tools">
-                    <button onclick="exportSave()" style="background:#4361ee;">Export Save Data</button>
-                    <button onclick="importSave()" style="background:#ff9f1c;">Import Save Data</button>
+                    <button onclick="exportSave()" style="background:#4361ee;">📤 Export Save Data String</button>
+                    <button onclick="importSave()" style="background:#ff9f1c; color: #111;">📥 Import Save Data String</button>
                 </div>
             </div>
             <div id="craft" class="tab-content"></div>
@@ -75,12 +75,11 @@
     <div class="panel" style="max-width: 1000px; margin: 20px auto 0 auto;">
         <h4 style="margin: 0 0 5px 0; color: #6200ee;">📋 Patch Notes</h4>
         <div class="log-box">
-            [v2.1] SECURITY: Implemented Save String Export/Import. Players can now move progress between devices using encrypted save strings.
+            [v2.1] FULL DEPLOY: Fully operational Base64 Save Sync Pipeline. Players can now perfectly serialize and safely transport character strings.
         </div>
     </div>
 
     <script>
-        // ... (Keep existing AURAS, CRAFTS, POTS, quests, and game logic variables here)
         const AURAS = [
             { n: "Common", c: 2, col: "#fff" }, { n: "Uncommon", c: 5, col: "#82ff7a" },
             { n: "Rare", c: 15, col: "#4cc9f0" }, { n: "Epic", c: 50, col: "#4361ee" },
@@ -111,23 +110,45 @@
             { id: "q_mythics", n: "Legendary Hunter", desc: "Collect Legendary or better auras", target: 1, reward: { godly_p: 1, absolute_p: 1 }, progress: 0, step: 1 }
         ];
 
-        let p = { rolls: 0, pityCount: 0, inv: {}, potInventory: { luck_p: 0, super_luck_p: 0, ultra_luck_p: 0, godly_p: 0, absolute_p: 0, transcendant_p: 0, speed_p: 0 }, gear: null, activePots: [], activeCharges: [], isRolling: false, onCooldown: false };
+        let p = { 
+            rolls: 0, 
+            pityCount: 0,
+            inv: {}, 
+            potInventory: { luck_p: 0, super_luck_p: 0, ultra_luck_p: 0, godly_p: 0, absolute_p: 0, transcendant_p: 0, speed_p: 0 }, 
+            gear: null, 
+            activePots: [], 
+            activeCharges: [], 
+            isRolling: false, 
+            onCooldown: false 
+        };
         AURAS.forEach(a => p.inv[a.n] = 0);
 
-        // --- SAVE/IMPORT ENGINE ---
+        // --- BACKEND STORAGE COMPRESSION PIPELINE ---
         function exportSave() {
-            let data = btoa(JSON.stringify({ player: p, quests: quests }));
-            prompt("Copy your save string below:", data);
+            try {
+                let cleanString = btoa(encodeURIComponent(JSON.stringify({ player: p, quests: quests })));
+                prompt("📋 COPY YOUR SAVE STRING PROFILE BELOW:", cleanString);
+            } catch (e) {
+                alert("Failed to package profile.");
+            }
         }
 
         function importSave() {
-            let data = prompt("Paste your save string:");
-            if (data) {
-                try {
-                    let parsed = JSON.parse(atob(data));
-                    p = parsed.player; quests = parsed.quests;
-                    saveGame(); up(); alert("Save imported!");
-                } catch(e) { alert("Invalid save string!"); }
+            let data = prompt("📥 PASTE YOUR SAVE STRING PROFILE HERE:");
+            if (!data) return;
+            try {
+                let parsed = JSON.parse(decodeURIComponent(atob(data.trim())));
+                if (parsed && parsed.player) {
+                    p = parsed.player;
+                    if (parsed.quests) quests = parsed.quests;
+                    saveGame();
+                    up();
+                    alert("✅ Profile successfully migrated and loaded!");
+                } else {
+                    alert("❌ Invalid profile structure.");
+                }
+            } catch(e) { 
+                alert("❌ Decode Failed: Invalid or corrupted save string code."); 
             }
         }
 
@@ -135,24 +156,205 @@
             try {
                 localStorage.setItem("sols_rng_save", JSON.stringify({ player: p, quests: quests }));
                 document.getElementById("sync-badge").style.background = "#00ffcc";
+                document.getElementById("sync-badge").textContent = "DATA SECURE";
             } catch(e) {}
         }
 
         function loadGame() {
-            let saved = localStorage.getItem("sols_rng_save");
-            if (!saved) return;
-            let parsed = JSON.parse(saved);
-            p = parsed.player; quests = parsed.quests;
+            try {
+                let saved = localStorage.getItem("sols_rng_save");
+                if (!saved) return;
+                let parsed = JSON.parse(saved);
+                if (parsed && parsed.player) {
+                    p.rolls = parsed.player.rolls || 0;
+                    p.pityCount = parsed.player.pityCount || 0;
+                    p.gear = parsed.player.gear || null;
+                    p.activePots = parsed.player.activePots || [];
+                    p.activeCharges = parsed.player.activeCharges || [];
+                    if (parsed.player.inv) Object.keys(parsed.player.inv).forEach(k => p.inv[k] = parsed.player.inv[k]);
+                    if (parsed.player.potInventory) Object.keys(parsed.player.potInventory).forEach(k => p.potInventory[k] = parsed.player.potInventory[k]);
+                }
+                if (parsed && parsed.quests) quests = parsed.quests;
+            } catch(e) {}
         }
 
-        // --- (Paste remaining game logic functions: resetGame, getStats, styleAura, trackQuestProgress, claimQuest, checkMilestones, formatTime, startRoll, executeRoll, checkAutoRoll, has, take, craft, brew, usePotion, setInterval(timer), up, tab) ---
-        // I've truncated the functions here for length, but ensure you keep the exact functional logic from the previous code block when pasting!
-        
-        function resetGame() { if(confirm("Wipe data?")) { localStorage.removeItem("sols_rng_save"); window.location.reload(); } }
-        function getStats() { let s = { luck: 1.0, speedMod: 1.0, cd: 1.5 }; return s; } // Placeholder, paste full function from last block
-        // ... include your standard game functions here as before ...
+        function resetGame() {
+            if(confirm("Permanently wipe your profile data from this browser?")) {
+                localStorage.removeItem("sols_rng_save");
+                window.location.reload();
+            }
+        }
+
+        function getStats() {
+            let s = { luck: 1.0, speedMod: 1.0, cd: 1.5 }; 
+            if (p.gear) {
+                let g = CRAFTS.find(c => c.id === p.gear).b;
+                s.luck += g.luck;
+                if(g.speed) s.speedMod *= (1 - g.speed);
+            }
+            p.activePots.forEach(pot => {
+                s.luck += pot.b.luck;
+                if(pot.b.speed) s.speedMod *= pot.b.speed;
+            });
+            p.activeCharges.forEach(pot => { s.luck += pot.b.luck; });
+            if ((p.pityCount + 1) === 10) { s.luck *= 2; }
+            s.cd = s.cd * s.speedMod;
+            return s;
+        }
+
+        function styleAura(el, aura) {
+            el.textContent = aura.n;
+            el.style.background = aura.col.includes("grad") ? aura.col : "none";
+            if(aura.col.includes("grad")) { el.style.webkitBackgroundClip = "text"; el.style.webkitTextFillColor = "transparent"; }
+            else { el.style.webkitTextFillColor = "initial"; el.style.color = aura.col; }
+        }
+
+        function trackQuestProgress(type, amt, rarityVal = 0) {
+            if (type === "roll") quests[0].progress += amt;
+            if (type === "aura") {
+                if (rarityVal >= 50) quests[1].progress += amt;
+                if (rarityVal >= 200) quests[2].progress += amt;
+            }
+        }
+
+        function claimQuest(index) {
+            let q = quests[index];
+            if (q.progress >= q.target) {
+                Object.entries(q.reward).forEach(([id, qty]) => { p.potInventory[id] = (p.potInventory[id] || 0) + qty; });
+                q.step++; q.progress = 0; q.target = Math.floor(q.target * 2.5);
+                Object.keys(q.reward).forEach(id => q.reward[id] += 1);
+                saveGame(); up();
+            }
+        }
+
+        function checkMilestones() {
+            let banner = document.getElementById("reward-banner");
+            if (p.rolls < 100) banner.textContent = `Next milestone: Basic Chest at 100 rolls (${100 - p.rolls} left)`;
+            else if (p.rolls < 500) banner.textContent = `Next milestone: Advanced Chest at 500 rolls (${500 - p.rolls} left)`;
+            else banner.textContent = "All milestones achieved!";
+        }
+
+        function formatTime(secs) {
+            let m = Math.floor(secs / 60), s = secs % 60;
+            return m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }
+
+        function startRoll() {
+            if (p.isRolling || p.onCooldown) return;
+            p.isRolling = true;
+            document.getElementById("roll-btn").disabled = true;
+            let el = document.getElementById("a-name");
+            document.getElementById("a-chance").textContent = "Rolling...";
+
+            let ticks = 0;
+            let anim = setInterval(() => {
+                let randAura = AURAS[Math.floor(Math.random() * AURAS.length)];
+                styleAura(el, randAura);
+                ticks++;
+                if (ticks >= 8) { clearInterval(anim); executeRoll(); }
+            }, 80);
+        }
+
+        function executeRoll() {
+            p.rolls++; p.pityCount++;
+            trackQuestProgress("roll", 1); checkMilestones();
+            
+            let stats = getStats(), rolled = AURAS[0];
+            for (let i = AURAS.length - 1; i >= 0; i--) {
+                if ((AURAS[i].c / stats.luck) <= 1 || Math.random() < (1 / (AURAS[i].c / stats.luck))) { rolled = AURAS[i]; break; }
+            }
+            p.inv[rolled.n]++; trackQuestProgress("aura", 1, rolled.c);
+            styleAura(document.getElementById("a-name"), rolled);
+            document.getElementById("a-chance").textContent = `1 in ${rolled.c.toLocaleString()}`;
+            
+            if (p.activeCharges.length > 0) { p.activeCharges.shift(); }
+            if(p.pityCount >= 10) p.pityCount = 0;
+            document.getElementById("pity-banner").textContent = `Rolls until 2x Luck: ${10 - p.pityCount}`;
+
+            p.isRolling = false; p.onCooldown = true;
+            let fill = document.getElementById("cd-fill");
+            fill.style.transition = "none"; fill.style.width = "100%";
+            setTimeout(() => {
+                fill.style.transition = `width ${stats.cd}s linear`; fill.style.width = "0%";
+            }, 10);
+
+            setTimeout(() => {
+                p.onCooldown = false;
+                if (!p.isRolling) document.getElementById("roll-btn").disabled = false;
+                if(document.getElementById("auto-roll-cb").checked) startRoll();
+            }, stats.cd * 1000);
+
+            saveGame(); up();
+        }
+
+        function checkAutoRoll() { if(document.getElementById("auto-roll-cb").checked && !p.isRolling && !p.onCooldown) startRoll(); }
+        function has(req) { return Object.entries(req).every(([k, v]) => (p.inv[k] || 0) >= v); }
+        function take(req) { Object.entries(req).forEach(([k, v]) => p.inv[k] -= v); }
+        function craft(id) { let g = CRAFTS.find(c => c.id === id); if (has(g.req)) { take(g.req); p.gear = id; saveGame(); up(); } }
+        function brew(id) { let pt = POTS.find(x => x.id === id); if (has(pt.req)) { take(pt.req); p.potInventory[id]++; saveGame(); up(); } }
+
+        function usePotion(id) {
+            if (p.potInventory[id] > 0) {
+                p.potInventory[id]--;
+                let pt = POTS.find(x => x.id === id);
+                if (pt.type === "charge") { p.activeCharges.push(JSON.parse(JSON.stringify(pt))); } 
+                else {
+                    let existingPot = p.activePots.find(pot => pot.id === id);
+                    if (existingPot) { existingPot.dur += pt.dur; } else { p.activePots.push(JSON.parse(JSON.stringify(pt))); }
+                }
+                saveGame(); up();
+            }
+        }
+
+        setInterval(() => {
+            if (p.activePots.length > 0) {
+                p.activePots.forEach(pot => pot.dur--);
+                p.activePots = p.activePots.filter(pot => pot.dur > 0);
+                saveGame(); up();
+            }
+        }, 1000);
+
+        function up() {
+            let stats = getStats();
+            document.getElementById("r-count").textContent = p.rolls;
+            document.getElementById("r-luck").textContent = stats.luck.toFixed(1);
+            document.getElementById("r-speed").textContent = stats.cd.toFixed(2);
+            document.getElementById("r-gear").textContent = p.gear ? CRAFTS.find(c => c.id === p.gear).n : "None";
+            
+            let displayPots = p.activePots.map(pt => `🧪 ${pt.n}: ${formatTime(pt.dur)}`);
+            if (p.activeCharges.length > 0) displayPots.push(`🌟 Charged Rolls Queued: ${p.activeCharges.length}`);
+            document.getElementById("p-timer").innerHTML = displayPots.length > 0 ? displayPots.join("<br>") : "";
+
+            document.getElementById("inv-list").innerHTML = AURAS.map(a => {
+                return p.inv[a.n] ? `<div class="item"><div><b style="color:${a.col.includes('grad') ? '#fff' : a.col}">${a.n}</b><br><small style="color:#aaa;">Rarity: 1 in ${a.c.toLocaleString()}</small></div><b>x${p.inv[a.n]}</b></div>` : '';
+            }).join('');
+            
+            document.getElementById("craft").innerHTML = CRAFTS.map(c => {
+                let req = Object.entries(c.req).map(([k,v]) => `${k}:${p.inv[k] || 0}/${v}`).join(", ");
+                return `<div class="item"><div><b>${c.n}</b><br><small>${c.d} (${req})</small></div><button onclick="craft('${c.id}')" ${!has(c.req) || p.gear===c.id ? 'disabled' : ''}>${p.gear===c.id?'Eq':'Craft'}</button></div>`;
+            }).join('');
+
+            document.getElementById("pot").innerHTML = POTS.map(pt => {
+                let qty = p.potInventory[pt.id] || 0;
+                let req = Object.entries(pt.req).map(([k,v]) => `${k}:${p.inv[k] || 0}/${v}`).join(", ");
+                return `<div class="item"><div><b>${pt.n} (Owned: ${qty})</b><br><small>${pt.d}</small></div><div style="display:flex; gap:5px;"><button onclick="brew('${pt.id}')" ${!has(pt.req) ? 'disabled' : ''}>Brew</button><button onclick="usePotion('${pt.id}')" ${qty === 0 ? 'disabled' : ''}>Use</button></div></div>`;
+            }).join('');
+
+            document.getElementById("quests").innerHTML = quests.map((q, idx) => {
+                let ready = q.progress >= q.target;
+                return `<div class="item"><div><b>${q.n}</b><br><small>${q.desc}</small></div><div><span>${q.progress}/${q.target}</span><button onclick="claimQuest(${idx})" ${!ready ? 'disabled' : ''}>Claim</button></div></div>`;
+            }).join('');
+        }
+
+        function tab(t) {
+            document.querySelectorAll('.tab-content').forEach(e => e.style.display = 'none');
+            document.querySelectorAll('.t-btn').forEach(e => e.classList.remove('active'));
+            document.getElementById(t).style.display = 'block';
+            event.currentTarget.classList.add('active');
+        }
 
         loadGame();
+        checkMilestones();
         up();
     </script>
 </body>
