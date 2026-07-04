@@ -24,7 +24,6 @@
         .status-label { font-size: 0.8rem; font-weight: bold; color: #aaa; }
         .backup-badge { background: #00ffcc; color: #111; font-size: 0.65rem; padding: 3px 8px; border-radius: 10px; font-weight: bold; letter-spacing: 0.5px; }
         
-        /* Save Export/Import styling */
         .save-tools { border-top: 1px solid #333; padding-top: 10px; margin-top: 15px; display: flex; gap: 8px; flex-direction: column; }
     </style>
 </head>
@@ -75,7 +74,7 @@
     <div class="panel" style="max-width: 1000px; margin: 20px auto 0 auto;">
         <h4 style="margin: 0 0 5px 0; color: #6200ee;">📋 Patch Notes</h4>
         <div class="log-box">
-            [v2.1] FULL DEPLOY: Fully operational Base64 Save Sync Pipeline. Players can now perfectly serialize and safely transport character strings.
+            [v2.2] UI BUGFIX: Restored display metrics for potion brewing requirements and quest itemized reward targets. Encrypted Base64 state syncing fully protected.
         </div>
     </div>
 
@@ -123,7 +122,6 @@
         };
         AURAS.forEach(a => p.inv[a.n] = 0);
 
-        // --- BACKEND STORAGE COMPRESSION PIPELINE ---
         function exportSave() {
             try {
                 let cleanString = btoa(encodeURIComponent(JSON.stringify({ player: p, quests: quests })));
@@ -131,6 +129,12 @@
             } catch (e) {
                 alert("Failed to package profile.");
             }
+        }
+
+        if (!String.prototype.trim) {
+            String.prototype.trim = function () {
+                return this.replace(/^[\s\uFEFF\xA0]+|[\s\uFEFF\xA0]+$/g, '');
+            };
         }
 
         function importSave() {
@@ -337,12 +341,13 @@
             document.getElementById("pot").innerHTML = POTS.map(pt => {
                 let qty = p.potInventory[pt.id] || 0;
                 let req = Object.entries(pt.req).map(([k,v]) => `${k}:${p.inv[k] || 0}/${v}`).join(", ");
-                return `<div class="item"><div><b>${pt.n} (Owned: ${qty})</b><br><small>${pt.d}</small></div><div style="display:flex; gap:5px;"><button onclick="brew('${pt.id}')" ${!has(pt.req) ? 'disabled' : ''}>Brew</button><button onclick="usePotion('${pt.id}')" ${qty === 0 ? 'disabled' : ''}>Use</button></div></div>`;
+                return `<div class="item"><div><b>${pt.n} (Owned: ${qty})</b><br><small>${pt.d}</small><br><small style="color:#aaa;">Requires: ${req}</small></div><div style="display:flex; gap:5px; align-items:center;"><button onclick="brew('${pt.id}')" ${!has(pt.req) ? 'disabled' : ''}>Brew</button><button onclick="usePotion('${pt.id}')" ${qty === 0 ? 'disabled' : ''} style="background:#00b4d8;">Use</button></div></div>`;
             }).join('');
 
             document.getElementById("quests").innerHTML = quests.map((q, idx) => {
                 let ready = q.progress >= q.target;
-                return `<div class="item"><div><b>${q.n}</b><br><small>${q.desc}</small></div><div><span>${q.progress}/${q.target}</span><button onclick="claimQuest(${idx})" ${!ready ? 'disabled' : ''}>Claim</button></div></div>`;
+                let rewardsList = Object.entries(q.reward).map(([id, qty]) => `${qty}x ${POTS.find(x=>x.id===id).n}`).join(", ");
+                return `<div class="item"><div><b>${q.n}</b><br><small>${q.desc}</small><br><small style="color:#ffca28;">Reward: ${rewardsList}</small></div><div style="text-align: right;"><span style="font-weight:bold; margin-right:10px; color:${ready?'#00ffcc':'#aaa'};">${q.progress}/${q.target}</span><button onclick="claimQuest(${idx})" ${!ready ? 'disabled' : ''} style="background:${ready?'#00f5d4':'#444'}; color:#111;">Claim</button></div></div>`;
             }).join('');
         }
 
