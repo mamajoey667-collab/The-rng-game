@@ -49,8 +49,9 @@
 
     <h2><span id="player-title" class="title-badge"></span>Sol's RNG Overhaul</h2>
     <div class="identity-banner">Playing as: <span id="display-nickname" style="color: #00ffcc; font-weight: bold;">Connecting...</span></div>
-    <p>Rolls: <span id="r-count">0</span> | Luck: <span id="r-luck">1.0</span>x | CD: <span id="r-speed">1.5</span>s | Gear: <span id="r-gear">None</span> | Prestige: <span id="r-prestige" style="color:#ffca28;">0</span></p>
-    <p style="font-size: 0.9rem; margin-top: -10px; color: #aaa;">Equipped Aura: <span id="r-equipped" style="font-weight: bold;">None</span></p>
+    <p>Rolls: <span id="r-count">0</span> | Luck: <span id="r-luck">1.0</span>x | CD: <span id="r-speed">1.5</span>s | Prestige: <span id="r-prestige" style="color:#ffca28;">0</span></p>
+    <p style="font-size: 0.85rem; margin-top: -10px; color: #bbb;">Glove: <span id="r-gear" style="color:#fff; font-weight:bold;">None</span> | Passive Utility: <span id="r-utility" style="color:#ff9f1c; font-weight:bold;">None</span></p>
+    <p style="font-size: 0.9rem; margin-top: -5px; color: #aaa;">Equipped Aura: <span id="r-equipped" style="font-weight: bold;">None</span></p>
 
     <div class="grid">
         <div class="panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 360px;">
@@ -153,9 +154,9 @@
         } catch (err) { console.error("Firebase Initialization Failed: ", err); }
 
         const PATCH_NOTES = [
+            "[v7.4 UTILITY SPLIT] The Alchemist Cauldron has been split into a brand new 'Passive Utility' slot! You can now equip both your favorite Luck Gloves/Gauntlets and your Cauldron at the same time for maximized cross-progression resource generation.",
             "[v7.3 QUEST UPDATE] Expanded quest systems! Integrated multi-faceted objective tracking across macro conditions, active biome alignments, consumption tracking modules, and macro-prestige verification data configurations.",
-            "[v7.2 CONTENT] Added missing Solar (1/5,000) and Chromatic (1/15,000) auras. Added Solar Gauntlet and Chromatic Gauntlet to crafting blueprints. Patched CSS gradient text rendering bugs for cross-browser compatibility.",
-            "[v7.1 HOTFIX] Fixed structural biome loop locks. Patched dynamic aura generation conditionals to process drop tables across changing environments correctly. Implemented safe configuration migrations for local database objects."
+            "[v7.2 CONTENT] Added missing Solar (1/5,000) and Chromatic (1/15,000) auras. Added Solar Gauntlet and Chromatic Gauntlet to crafting blueprints. Patched CSS gradient text rendering bugs for cross-browser compatibility."
         ];
 
         const AURAS = [
@@ -177,11 +178,12 @@
             { n: "Eclipse", c: 50000, col: "linear-gradient(90deg, #111, #ff4a4a, #111)", biome: "Eclipse" }
         ];
 
+        // Blueprints marked with slot classifications
         const CRAFTS = [
-            { id: "glove", n: "Luck Glove", d: "+50% Luck", b: {luck: 0.5, speed: 0}, req: { Common: 5, Uncommon: 3 } },
-            { id: "cauldron", n: "Alchemist Cauldron", d: "Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose auras.", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } },
-            { id: "solar_gauntlet", n: "Solar Gauntlet", d: "+150% Luck, -15% Cooldown Time", b: {luck: 1.5, speed: 0.15}, req: { Solar: 1, Epic: 10, Legendary: 3 } },
-            { id: "chromatic_gauntlet", n: "Chromatic Gauntlet", d: "+300% Luck, -30% Cooldown Time", b: {luck: 3.0, speed: 0.30}, req: { Chromatic: 1, Glorious: 2, Mythic: 5 } }
+            { id: "glove", n: "Luck Glove", d: "+50% Luck", slot: "glove", b: {luck: 0.5, speed: 0}, req: { Common: 5, Uncommon: 3 } },
+            { id: "cauldron", n: "Alchemist Cauldron", d: "Passive Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose loose auras.", slot: "utility", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } },
+            { id: "solar_gauntlet", n: "Solar Gauntlet", d: "+150% Luck, -15% Cooldown Time", slot: "glove", b: {luck: 1.5, speed: 0.15}, req: { Solar: 1, Epic: 10, Legendary: 3 } },
+            { id: "chromatic_gauntlet", n: "Chromatic Gauntlet", d: "+300% Luck, -30% Cooldown Time", slot: "glove", b: {luck: 3.0, speed: 0.30}, req: { Chromatic: 1, Glorious: 2, Mythic: 5 } }
         ];
 
         const POTS = [
@@ -201,7 +203,6 @@
             { n: "Eclipse", bg: "#1c1111", border: "#ff4a4a", desc: "EXCLUSIVE AURA AVAILABILITY: Eclipse (1/50,000) unlocked!" }
         ];
 
-        // EXPANDED SYSTEM QUESTS WITH DIVERSE OBJECTIVES
         let quests = [
             { id: "q_rolls", n: "Novice Spinner", desc: "Total rolls executed", target: 50, reward: { speed_p: 2 }, progress: 0, step: 1 },
             { id: "q_epics", n: "Epic Collector", desc: "Collect Epic or better auras", target: 5, reward: { ultra_luck_p: 1 }, progress: 0, step: 1 },
@@ -215,7 +216,7 @@
         let p = { 
             nickname: "", userId: "", rolls: 0, pityCount: 0, inv: {}, 
             potInventory: { luck_p: 0, super_luck_p: 0, ultra_luck_p: 0, godly_p: 0, absolute_p: 0, transcendant_p: 0, speed_p: 0 }, 
-            craftedGears: [], gear: null, activePots: [], activeCharges: [], isRolling: false, onCooldown: false,
+            craftedGears: [], gear: null, utility: null, activePots: [], activeCharges: [], isRolling: false, onCooldown: false,
             equippedAura: "None", filters: { Common: false, Uncommon: false, Rare: false }, cauldronProgress: 0,
             prestige: 0, totalSeconds: 0, luckiestChance: 0, luckiestName: "None", totalPotionsUsed: 0
         };
@@ -226,7 +227,7 @@
 
         const DOM = {
             count: document.getElementById("r-count"), luck: document.getElementById("r-luck"), speed: document.getElementById("r-speed"),
-            gear: document.getElementById("r-gear"), equipped: document.getElementById("r-equipped"), banner: document.getElementById("reward-banner"),
+            gear: document.getElementById("r-gear"), utility: document.getElementById("r-utility"), equipped: document.getElementById("r-equipped"), banner: document.getElementById("reward-banner"),
             pity: document.getElementById("pity-banner"), name: document.getElementById("a-name"), chance: document.getElementById("a-chance"),
             rollBtn: document.getElementById("roll-btn"), autoCb: document.getElementById("auto-roll-cb"), fill: document.getElementById("cd-fill"),
             timer: document.getElementById("p-timer"), cauldron: document.getElementById("cauldron-alert"), sync: document.getElementById("sync-badge"),
@@ -290,7 +291,7 @@
             textArea.select();
             document.execCommand("copy");
             document.body.removeChild(textArea);
-            alert("✅ SAVE CODE COPIED TO CLIPBOARD:\n\n" + code + "\n\n(Includes Nickname & Progress)");
+            alert("✅ SAVE CODE COPIED TO CLIPBOARD:\n\n" + code);
         }
 
         function loadSaveCode() {
@@ -305,9 +306,7 @@
                     up();
                     alert("✨ Progress Loaded Successfully for: " + p.nickname);
                 }
-            } catch (e) {
-                alert("❌ Invalid or Corrupted Save Code.");
-            }
+            } catch (e) { alert("❌ Invalid or Corrupted Save Code."); }
         }
 
         function saveFilters() {
@@ -328,7 +327,6 @@
                     DOM.fCom.checked = !!p.filters.Common; DOM.fUnc.checked = !!p.filters.Uncommon; DOM.fRare.checked = !!p.filters.Rare;
                 }
                 if (parsed?.quests) {
-                    // Data migration mapping to retain safety if schema array counts differ
                     parsed.quests.forEach(savedQ => {
                         let match = quests.find(q => q.id === savedQ.id);
                         if (match) {
@@ -345,8 +343,16 @@
         function resetGame() { if(confirm("Permanently wipe profile data?")) { localStorage.removeItem("sols_rng_multi_save"); window.location.reload(); } }
 
         function getStats() {
-            let s = { luck: 1.0 + (p.prestige * 0.25), speedMod: 1.0, cd: 1.5 }, found = CRAFTS.find(c => c.id === p.gear);
-            if (found) { s.luck += found.b.luck; if(found.b.speed) s.speedMod *= (1 - found.b.speed); }
+            let s = { luck: 1.0 + (p.prestige * 0.25), speedMod: 1.0, cd: 1.5 };
+            
+            // Glove Bonus Evaluation
+            let foundGlove = CRAFTS.find(c => c.id === p.gear);
+            if (foundGlove) { s.luck += foundGlove.b.luck; if(foundGlove.b.speed) s.speedMod *= (1 - foundGlove.b.speed); }
+            
+            // Utility Bonus Evaluation
+            let foundUtil = CRAFTS.find(c => c.id === p.utility);
+            if (foundUtil) { s.luck += foundUtil.b.luck; if(foundUtil.b.speed) s.speedMod *= (1 - foundUtil.b.speed); }
+
             p.activePots.forEach(pot => { s.luck += pot.b.luck; if(pot.b.speed) s.speedMod *= pot.b.speed; });
             p.activeCharges.forEach(pot => s.luck += pot.b.luck);
             if (p.pityCount === 9) s.luck *= 2;
@@ -357,17 +363,11 @@
             let a = AURAS.find(x => x.n === name) || { n: "None", col: "#aaa" }; el.textContent = a.n;
             let isGrad = a.col.includes("linear-gradient");
             if (isGrad) {
-                el.style.background = a.col; 
-                el.style.webkitBackgroundClip = "text"; 
-                el.style.webkitTextFillColor = "transparent";
-                el.style.backgroundClip = "text";
-                el.style.color = "transparent";
+                el.style.background = a.col; el.style.webkitBackgroundClip = "text"; el.style.webkitTextFillColor = "transparent";
+                el.style.backgroundClip = "text"; el.style.color = "transparent";
             } else {
-                el.style.background = "none"; 
-                el.style.webkitBackgroundClip = "initial"; 
-                el.style.webkitTextFillColor = "initial"; 
-                el.style.backgroundClip = "initial";
-                el.style.color = a.col;
+                el.style.background = "none"; el.style.webkitBackgroundClip = "initial"; el.style.webkitTextFillColor = "initial"; 
+                el.style.backgroundClip = "initial"; el.style.color = a.col;
             }
         }
 
@@ -388,7 +388,6 @@
             }
         }
 
-        // EXPANDED PROGRESSION TRACKING CORE FOR ALL QUEST MATRIX OBJECTIVES
         function trackQuestProgress(type, amt, val = 0) {
             if (type === "roll") {
                 quests[0].progress += amt;
@@ -400,9 +399,7 @@
                 if (val >= 200) quests[2].progress += amt; 
                 if (val >= 1000) quests[6].progress += amt;
             }
-            if (type === "potion") {
-                quests[3].progress += amt;
-            }
+            if (type === "potion") { quests[3].progress += amt; }
         }
 
         function claimQuest(idx) {
@@ -416,7 +413,19 @@
 
         function formatTime(secs) { let m = Math.floor(secs / 60), s = secs % 60; return m > 0 ? `${m}m ${s}s` : `${s}s`; }
         function toggleEquip(name) { p.equippedAura = (p.equippedAura === name) ? "None" : (p.inv[name] > 0 ? name : "None"); saveGame(); up(); }
-        function toggleGear(id) { p.gear = (p.gear === id) ? null : (p.craftedGears.includes(id) ? id : null); saveGame(); up(); }
+        
+        // Dynamic Single or Multi-slot Equipment Toggle Engine
+        function toggleGear(id) { 
+            let blueprint = CRAFTS.find(x => x.id === id);
+            if (!blueprint || !p.craftedGears.includes(id)) return;
+            
+            if (blueprint.slot === "utility") {
+                p.utility = (p.utility === id) ? null : id;
+            } else {
+                p.gear = (p.gear === id) ? null : id;
+            }
+            saveGame(); up(); 
+        }
 
         function combinePotion(targetId) {
             let pt = POTS.find(x => x.id === targetId); if (!pt?.fuseFrom) return;
@@ -445,7 +454,9 @@
             if (p.filters[rolled.n]) { DOM.chance.textContent = `🗑️ Auto-Deleted (1 in ${rolled.c.toLocaleString()})`; } 
             else { p.inv[rolled.n]++; DOM.chance.textContent = `1 in ${rolled.c.toLocaleString()}`; }
             if (rolled.c > p.luckiestChance) { p.luckiestChance = rolled.c; p.luckiestName = rolled.n; }
-            if (p.gear === "cauldron" && ++p.cauldronProgress >= 50) {
+            
+            // Checks passive utility assignment for brewing triggers
+            if (p.utility === "cauldron" && ++p.cauldronProgress >= 50) {
                 p.cauldronProgress = 0;
                 if (p.inv.Common >= 3 && p.inv.Uncommon >= 1) {
                     p.inv.Common -= 3; p.inv.Uncommon -= 1; p.potInventory.luck_p++; DOM.cauldron.textContent = "✨ Cauldron triggered! Automatically brewed 1x Lucky Potion.";
@@ -464,13 +475,13 @@
         function checkAutoRoll() { if(DOM.autoCb.checked && !p.isRolling && !p.onCooldown) startRoll(); }
         const has = req => req ? Object.entries(req).every(([k, v]) => (p.inv[k] || 0) >= v) : false;
         const take = req => req && Object.entries(req).forEach(([k, v]) => p.inv[k] -= v);
-        function craft(id) { let g = CRAFTS.find(c => c.id === id); if (g && !p.craftedGears.includes(id) && has(g.req)) { take(g.req); p.craftedGears.push(id); p.gear = id; p.cauldronProgress = 0; saveGame(); up(); } }
+        function craft(id) { let g = CRAFTS.find(c => c.id === id); if (g && !p.craftedGears.includes(id) && has(g.req)) { take(g.req); p.craftedGears.push(id); if (g.slot === "utility") { p.utility = id; } else { p.gear = id; } p.cauldronProgress = 0; saveGame(); up(); } }
         function brew(id) { let pt = POTS.find(x => x.id === id); if (pt?.req && has(pt.req)) { take(pt.req); p.potInventory[id]++; saveGame(); up(); } }
 
         function usePotion(id) {
             if (p.potInventory[id] > 0) {
                 p.potInventory[id]--; p.totalPotionsUsed++; let pt = POTS.find(x => x.id === id);
-                trackQuestProgress("potion", 1); // Triggers potion usage counter metric
+                trackQuestProgress("potion", 1);
                 if (pt.type === "charge") p.activeCharges.push(JSON.parse(JSON.stringify(pt)));
                 else { let e = p.activePots.find(x => x.id === id); if (e) e.dur += pt.dur; else p.activePots.push(JSON.parse(JSON.stringify(pt))); }
                 saveGame(); up();
@@ -497,18 +508,19 @@
         }, 1000);
 
         function up() {
-            let stats = getStats(), activeGear = CRAFTS.find(c => c.id === p.gear);
+            let stats = getStats(), activeGear = CRAFTS.find(c => c.id === p.gear), activeUtil = CRAFTS.find(c => c.id === p.utility);
             DOM.count.textContent = p.rolls; DOM.luck.textContent = stats.luck.toFixed(1); DOM.speed.textContent = stats.cd.toFixed(2);
-            DOM.gear.textContent = activeGear ? activeGear.n : "None"; DOM.pity.textContent = `Rolls until 2x Luck: ${10 - p.pityCount}`;
-            DOM.prestige.textContent = p.prestige;
-            let myTitle = getTitle(p.rolls);
-            DOM.playerTitle.textContent = myTitle + " ";
+            DOM.gear.textContent = activeGear ? activeGear.n : "None"; DOM.utility.textContent = activeUtil ? activeUtil.n : "None";
+            DOM.pity.textContent = `Rolls until 2x Luck: ${10 - p.pityCount}`; DOM.prestige.textContent = p.prestige;
+            
+            let myTitle = getTitle(p.rolls); DOM.playerTitle.textContent = myTitle + " ";
             if (p.rolls >= 10000) { DOM.prestigeZone.innerHTML = `<button onclick="executePrestige()" style="background:#ffca28; color:#111;">✨ ASCEND PRESTIGE NOW</button>`; } else { DOM.prestigeZone.innerHTML = ""; }
+            
             let activeB = BIOMES.find(b => b.n === currentBiomeStr);
             DOM.biome.textContent = activeB.n; DOM.biomeBoost.textContent = activeB.desc;
-            DOM.statTime.textContent = formatTime(p.totalSeconds);
-            DOM.statPots.textContent = p.totalPotionsUsed;
+            DOM.statTime.textContent = formatTime(p.totalSeconds); DOM.statPots.textContent = p.totalPotionsUsed;
             DOM.statLucky.textContent = p.luckiestName !== "None" ? `${p.luckiestName} (1 in ${p.luckiestChance.toLocaleString()})` : "None";
+            
             if (db) {
                 let currentRankings = [...localGlobalPlayers];
                 if (!currentRankings.some(u => u.name === p.nickname)) { currentRankings.push({ name: p.nickname, rolls: p.rolls, title: myTitle }); }
@@ -519,14 +531,27 @@
                         <span>${user.rolls.toLocaleString()} rolls</span>
                     </div>`).join('');
             } else { renderOfflineFallbackLeaderboard(); }
+            
             if (p.equippedAura !== "None" && !p.inv[p.equippedAura]) p.equippedAura = "None"; styleAura(DOM.equipped, p.equippedAura);
             DOM.banner.textContent = p.rolls < 100 ? `Next milestone: Basic Chest at 100 rolls (${100 - p.rolls} left)` : "All milestones achieved!";
             let displayPots = p.activePots.map(pt => `🧪 ${pt.n}: ${formatTime(pt.dur)}`); if (p.activeCharges.length) displayPots.push(`🌟 Charged Rolls Queued: ${p.activeCharges.length}`); DOM.timer.innerHTML = displayPots.join("<br>");
+            
             let visibleAuras = AURAS.filter(a => p.inv[a.n] > 0);
             DOM.invAuras.innerHTML = visibleAuras.length ? visibleAuras.map(a => { let eq = p.equippedAura === a.n; return `<div class="item"><div><b style="color:${a.col.includes('grad') ? '#fff' : a.col}">${a.n}</b><br><small style="color:#aaa;">Rarity: 1 in ${a.c.toLocaleString()}</small></div><div style="display:flex; gap:10px; align-items:center;"><b>x${p.inv[a.n]}</b><button onclick="toggleEquip('${a.n}')" style="background:${eq ? '#c94c4c' : '#00b4d8'}; padding:4px 8px; font-size:0.75rem;">${eq ? 'Unequip' : 'Equip'}</button></div></div>`; }).join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No auras collected yet.</div>';
             let visiblePots = POTS.filter(pt => (p.potInventory[pt.id] || 0) > 0);
             DOM.invPots.innerHTML = visiblePots.length ? visiblePots.map(pt => `<div class="item"><div><b>${pt.n}</b><br><small style="color:#aaa;">${pt.d}</small></div><div style="display:flex; gap:10px; align-items:center;"><b>x${p.potInventory[pt.id]}</b><button onclick="usePotion('${pt.id}')" style="background:#00b4d8; padding:4px 8px; font-size:0.75rem;">Use</button></div></div>`).join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No potions inside vault.</div>';
-            DOM.invGears.innerHTML = p.craftedGears.length ? p.craftedGears.map(gId => { let g = CRAFTS.find(x => x.id === gId), cur = p.gear === gId; return `<div class="item"><div><b>${g.n}</b><br><small style="color:#aaa;">${g.d}</small></div><button onclick="toggleGear('${gId}')" style="background:${cur ? '#c94c4c' : '#00ffcc'}; color:${cur ? '#fff' : '#111'}; padding:4px 8px; font-size:0.75rem;">${cur ? 'Unequip' : 'Equip'}</button></div>`; }).join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No equipment forged yet.</div>';
+            
+            // Handles rendering across multiple inventory equipment classifications seamlessly
+            let inventoryEquipment = [];
+            if (p.craftedGears.length) {
+                inventoryEquipment = p.craftedGears.map(gId => {
+                    let g = CRAFTS.find(x => x.id === gId);
+                    let isEquipped = (g.slot === "utility") ? (p.utility === gId) : (p.gear === gId);
+                    return `<div class="item"><div><b>${g.n}</b> <small style="color:#ffae19;">(${g.slot.toUpperCase()})</small><br><small style="color:#aaa;">${g.d}</small></div><button onclick="toggleGear('${gId}')" style="background:${isEquipped ? '#c94c4c' : '#00ffcc'}; color:${isEquipped ? '#fff' : '#111'}; padding:4px 8px; font-size:0.75rem;">${isEquipped ? 'Unequip' : 'Equip'}</button></div>`;
+                });
+            }
+            DOM.invGears.innerHTML = inventoryEquipment.length ? inventoryEquipment.join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No equipment forged yet.</div>';
+            
             DOM.craft.innerHTML = CRAFTS.map(c => { let own = p.craftedGears.includes(c.id), req = Object.entries(c.req).map(([k,v]) => `${k}:${p.inv[k] || 0}/${v}`).join(", "); return `<div class="item"><div><b>${c.n}</b> ${own ? '<span style="color:#00ffcc; font-size:0.75rem;">[UNLOCKED]</span>':''}<br><small>${c.d} (${req})</small></div><button onclick="craft('${c.id}')" ${!has(c.req) || own ? 'disabled' : ''}>${own ? 'Owned' : 'Forge'}</button></div>`; }).join('');
             DOM.pot.innerHTML = POTS.map(pt => {
                 let qty = p.potInventory[pt.id] || 0, details = "", ctrl = "";
@@ -542,15 +567,8 @@
             }).join('');
             
             DOM.quests.innerHTML = quests.map((q, idx) => {
-                let rdy = q.progress >= q.target, 
-                    rewards = Object.entries(q.reward).map(([id, qty]) => `${qty}x ${POTS.find(x=>x.id===id)?.n || id}`).join(", ");
-                return `<div class="item">
-                    <div><b>${q.n}</b><br><small>${q.desc}</small><br><small style="color:#ffca28;">Reward: ${rewards}</small></div>
-                    <div style="text-align: right;">
-                        <span style="font-weight:bold; margin-right:10px; color:${rdy?'#00ffcc':'#aaa'};">${q.progress}/${q.target}</span>
-                        <button onclick="claimQuest(${idx})" ${!rdy ? 'disabled' : ''} style="background:${rdy?'#00f5d4':'#444'}; color:#111;">Claim</button>
-                    </div>
-                </div>`;
+                let rdy = q.progress >= q.target, rewards = Object.entries(q.reward).map(([id, qty]) => `${qty}x ${POTS.find(x=>x.id===id)?.n || id}`).join(", ");
+                return `<div class="item"><div><b>${q.n}</b><br><small>${q.desc}</small><br><small style="color:#ffca28;">Reward: ${rewards}</small></div><div style="text-align: right;"><span style="font-weight:bold; margin-right:10px; color:${rdy?'#00ffcc':'#aaa'};">${q.progress}/${q.target}</span><button onclick="claimQuest(${idx})" ${!rdy ? 'disabled' : ''} style="background:${rdy?'#00f5d4':'#444'}; color:#111;">Claim</button></div></div>`;
             }).join('');
         }
 
