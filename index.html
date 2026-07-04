@@ -106,8 +106,8 @@
                 <div id="inv-gears-list"></div>
                 
                 <div class="save-tools">
-                    <button onclick="exportSave()" style="background:#4361ee;">📤 Export Save Data String</button>
-                    <button onclick="importSave()" style="background:#ff9f1c; color: #111;">📥 Import Save Data String</button>
+                    <button onclick="generateSaveCode()" style="background:#4361ee;">💾 Export Save Code</button>
+                    <button onclick="loadSaveCode()" style="background:#ff9f1c; color: #111;">📂 Import Save Code</button>
                 </div>
             </div>
             <div id="craft" class="tab-content"></div>
@@ -274,20 +274,33 @@
                 </div>`).join('');
         }
 
-        function exportSave() {
-            try { prompt("📋 COPY YOUR SAVE STRING PROFILE BELOW:", btoa(encodeURIComponent(JSON.stringify({ player: p, quests })))); } catch (e) {}
+        function generateSaveCode() {
+            const saveData = { player: p, quests: quests };
+            const code = btoa(encodeURIComponent(JSON.stringify(saveData)));
+            const textArea = document.createElement("textarea");
+            textArea.value = code;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            alert("✅ SAVE CODE COPIED TO CLIPBOARD:\n\n" + code + "\n\n(Includes Nickname & Progress)");
         }
 
-        function importSave() {
-            let data = prompt("📥 PASTE YOUR SAVE STRING PROFILE HERE:"); if (!data) return;
+        function loadSaveCode() {
+            const code = prompt("📥 PASTE YOUR SAVE CODE HERE:");
+            if (!code) return;
             try {
-                let parsed = JSON.parse(decodeURIComponent(atob(data.trim())));
-                if (parsed?.player) {
-                    p = parsed.player; if (parsed.quests) quests = parsed.quests;
-                    AURAS.forEach(a => { if(p.inv[a.n] === undefined) p.inv[a.n] = 0; });
-                    saveGame(); syncDatabaseProfile(); window.location.reload();
+                const decoded = JSON.parse(decodeURIComponent(atob(code)));
+                if (decoded.player && decoded.quests) {
+                    p = decoded.player;
+                    quests = decoded.quests;
+                    saveGame();
+                    up();
+                    alert("✨ Progress Loaded Successfully for: " + p.nickname);
                 }
-            } catch(e) { alert("❌ Decode Failed."); }
+            } catch (e) {
+                alert("❌ Invalid or Corrupted Save Code.");
+            }
         }
 
         function saveFilters() {
