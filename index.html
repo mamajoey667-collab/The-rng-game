@@ -19,7 +19,7 @@
         .auto-box input { width: 16px; height: 16px; cursor: pointer; }
         .reward-alert { color: #ffca28; font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; min-height: 20px; text-align: center;}
         .pity-alert { color: #00ffcc; font-weight: bold; font-size: 0.85rem; margin-bottom: 10px; }
-        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #00ffcc; margin-top: 10px; max-height: 120px; overflow-y: auto;}
+        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #ff007f; margin-top: 10px; max-height: 120px; overflow-y: auto;}
         
         .status-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .status-label { font-size: 0.8rem; font-weight: bold; color: #aaa; }
@@ -27,7 +27,6 @@
         
         .save-tools { border-top: 1px solid #333; padding-top: 10px; margin-top: 15px; display: flex; gap: 8px; flex-direction: column; }
         
-        /* Filter panel styling */
         .filter-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #333; font-size: 0.8rem; }
         .filter-title { font-weight: bold; color: #ff4a4a; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;}
         .filter-options { display: flex; gap: 10px; flex-wrap: wrap; }
@@ -37,7 +36,7 @@
 
     <h2>Sol's RNG Overhaul</h2>
     <p>Rolls: <span id="r-count">0</span> | Luck: <span id="r-luck">1.0</span>x | CD: <span id="r-speed">1.5</span>s | Gear: <span id="r-gear">None</span></p>
-    <p style="font-size: 0.9rem; margin-top: -10px; color: #aaa;">Equipped Best Aura: <span id="r-equipped" style="font-weight: bold;">None</span></p>
+    <p style="font-size: 0.9rem; margin-top: -10px; color: #aaa;">Equipped Aura: <span id="r-equipped" style="font-weight: bold;">None</span></p>
 
     <div class="grid">
         <div class="panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 340px;">
@@ -70,7 +69,6 @@
             </div>
             
             <div id="inv" class="tab-content" style="display: block;">
-                <!-- New QOL Filter Panel -->
                 <div class="filter-panel">
                     <div class="filter-title">🚫 Auto-Delete Filter (Trash Low Pulls)</div>
                     <div class="filter-options">
@@ -93,9 +91,9 @@
     </div>
 
     <div class="panel" style="max-width: 1000px; margin: 20px auto 0 auto;">
-        <h4 style="margin: 0 0 5px 0; color: #00ffcc;">📋 Patch Notes</h4>
+        <h4 style="margin: 0 0 5px 0; color: #ff007f;">📋 Patch Notes</h4>
         <div class="log-box">
-            [v3.0] THE QOL UPDATE: Added real-time Auto-Delete UI filters for Commons/Uncommons/Rares. Implemented highest-tier automatic profile title equipment tracking. Cooldown bars auto-scale beautifully with potion speed.
+            [v3.1] INVENTORY OVERHAUL: Replaced automated aura titles with a full manual equipment cosmetic engine. Players can now freely click 'Equip' on any possessed aura inside their inventory panels.
         </div>
     </div>
 
@@ -140,7 +138,7 @@
             activeCharges: [], 
             isRolling: false, 
             onCooldown: false,
-            bestAura: "None",
+            equippedAura: "None",
             filters: { Common: false, Uncommon: false, Rare: false }
         };
         AURAS.forEach(a => p.inv[a.n] = 0);
@@ -163,7 +161,6 @@
                     p = parsed.player;
                     if (parsed.quests) quests = parsed.quests;
                     
-                    // Sync filters checkboxes to UI
                     document.getElementById("f-common").checked = p.filters?.Common || false;
                     document.getElementById("f-uncommon").checked = p.filters?.Uncommon || false;
                     document.getElementById("f-rare").checked = p.filters?.Rare || false;
@@ -205,7 +202,7 @@
                     p.gear = parsed.player.gear || null;
                     p.activePots = parsed.player.activePots || [];
                     p.activeCharges = parsed.player.activeCharges || [];
-                    p.bestAura = parsed.player.bestAura || "None";
+                    p.equippedAura = parsed.player.equippedAura || parsed.player.bestAura || "None";
                     p.filters = parsed.player.filters || { Common: false, Uncommon: false, Rare: false };
                     
                     if (parsed.player.inv) Object.keys(parsed.player.inv).forEach(k => p.inv[k] = parsed.player.inv[k]);
@@ -281,6 +278,15 @@
             return m > 0 ? `${m}m ${s}s` : `${s}s`;
         }
 
+        function toggleEquip(auraName) {
+            if (p.equippedAura === auraName) {
+                p.equippedAura = "None";
+            } else {
+                if (p.inv[auraName] > 0) p.equippedAura = auraName;
+            }
+            saveGame(); up();
+        }
+
         function startRoll() {
             if (p.isRolling || p.onCooldown) return;
             p.isRolling = true;
@@ -306,19 +312,11 @@
                 if ((AURAS[i].c / stats.luck) <= 1 || Math.random() < (1 / (AURAS[i].c / stats.luck))) { rolled = AURAS[i]; break; }
             }
             
-            // Apply QOL Auto-Delete filter check
             if (p.filters[rolled.n] === true) {
                 document.getElementById("a-chance").textContent = `🗑️ Auto-Deleted (1 in ${rolled.c.toLocaleString()})`;
             } else {
                 p.inv[rolled.n]++;
                 document.getElementById("a-chance").textContent = `1 in ${rolled.c.toLocaleString()}`;
-                
-                // Track & auto-equip highest aura
-                if (p.bestAura === "None") { p.bestAura = rolled.n; } 
-                else {
-                    let currentBestObj = AURAS.find(a => a.n === p.bestAura);
-                    if (rolled.c > currentBestObj.c) { p.bestAura = rolled.n; }
-                }
             }
             
             trackQuestProgress("aura", 1, rolled.c);
@@ -378,14 +376,22 @@
             document.getElementById("r-speed").textContent = stats.cd.toFixed(2);
             document.getElementById("r-gear").textContent = p.gear ? CRAFTS.find(c => c.id === p.gear).n : "None";
             
-            styleAura(document.getElementById("r-equipped"), p.bestAura);
+            // Safety fallback if player crafted away their equipped aura count
+            if (p.equippedAura !== "None" && (!p.inv[p.equippedAura] || p.inv[p.equippedAura] <= 0)) {
+                p.equippedAura = "None";
+            }
+            styleAura(document.getElementById("r-equipped"), p.equippedAura);
             
             let displayPots = p.activePots.map(pt => `🧪 ${pt.n}: ${formatTime(pt.dur)}`);
             if (p.activeCharges.length > 0) displayPots.push(`🌟 Charged Rolls Queued: ${p.activeCharges.length}`);
             document.getElementById("p-timer").innerHTML = displayPots.length > 0 ? displayPots.join("<br>") : "";
 
             document.getElementById("inv-list").innerHTML = AURAS.map(a => {
-                return p.inv[a.n] ? `<div class="item"><div><b style="color:${a.col.includes('grad') ? '#fff' : a.col}">${a.n}</b><br><small style="color:#aaa;">Rarity: 1 in ${a.c.toLocaleString()}</small></div><b>x${p.inv[a.n]}</b></div>` : '';
+                if (!p.inv[a.n]) return '';
+                let isEquipped = p.equippedAura === a.n;
+                let btnText = isEquipped ? "Unequip" : "Equip";
+                let btnBg = isEquipped ? "#c94c4c" : "#00b4d8";
+                return `<div class="item"><div><b style="color:${a.col.includes('grad') ? '#fff' : a.col}">${a.n}</b><br><small style="color:#aaa;">Rarity: 1 in ${a.c.toLocaleString()}</small></div><div style="display:flex; gap:10px; align-items:center;"><b>x${p.inv[a.n]}</b><button onclick="toggleEquip('${a.n}')" style="background:${btnBg}; padding:4px 8px; font-size:0.75rem;">${btnText}</button></div></div>`;
             }).join('');
             
             document.getElementById("craft").innerHTML = CRAFTS.map(c => {
