@@ -158,21 +158,15 @@
         ];
 
         const AURAS = [
-            { n: "Common", c: 2, col: "#fff" }, 
-            { n: "Uncommon", c: 5, col: "#82ff7a" },
-            { n: "Rare", c: 15, col: "#4cc9f0" }, 
-            { n: "Epic", c: 50, col: "#4361ee" },
-            { n: "Legendary", c: 200, col: "#f72585" }, 
-            { n: "Mythic", c: 1000, col: "#b5179e" }, 
+            { n: "Common", c: 2, col: "#fff" }, { n: "Uncommon", c: 5, col: "#82ff7a" },
+            { n: "Rare", c: 15, col: "#4cc9f0" }, { n: "Epic", c: 50, col: "#4361ee" },
+            { n: "Legendary", c: 200, col: "#f72585" }, { n: "Mythic", c: 1000, col: "#b5179e" }, 
             { n: "Glorious", c: 2500, col: "linear-gradient(45deg, #ffca28, #f72585)" },
             { n: "Solar", c: 5000, col: "linear-gradient(90deg, #ff9f1c, #ffbf69)" },
             { n: "Chromatic", c: 15000, col: "linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)" },
-            { n: "Water", c: 50, col: "#00b4d8", biome: "Rainy" },
-            { n: "Gloomy", c: 250, col: "#5c677d", biome: "Rainy" },
-            { n: "Stormy", c: 2500, col: "#ff9f1c", biome: "Rainy" },
-            { n: "Moonlight", c: 444, col: "#caf0f8", biome: "Nightfall" },
-            { n: "Lunar", c: 5000, col: "#9d4edd", biome: "Nightfall" },
-            { n: "Nebula", c: 27500, col: "linear-gradient(90deg, #7209b7, #f72585)", biome: "Nightfall" },
+            { n: "Water", c: 50, col: "#00b4d8", biome: "Rainy" }, { n: "Gloomy", c: 250, col: "#5c677d", biome: "Rainy" },
+            { n: "Stormy", c: 2500, col: "#ff9f1c", biome: "Rainy" }, { n: "Moonlight", c: 444, col: "#caf0f8", biome: "Nightfall" },
+            { n: "Lunar", c: 5000, col: "#9d4edd", biome: "Nightfall" }, { n: "Nebula", c: 27500, col: "linear-gradient(90deg, #7209b7, #f72585)", biome: "Nightfall" },
             { n: "Eclipse", c: 50000, col: "linear-gradient(90deg, #111, #ff4a4a, #111)", biome: "Eclipse" }
         ];
 
@@ -513,9 +507,17 @@
                 }
                 return `<div class="item"><div><b>${pt.n} (Owned: ${qty})</b><br><small>${pt.d}</small><br>${details}</div><div style="display:flex; gap:5px; align-items:center;">${ctrl}</div></div>`;
             }).join('');
+            
             DOM.quests.innerHTML = quests.map((q, idx) => {
-                let rdy = q.progress >= q.target, rewards = Object.entries(q.reward).map(([id, qty]) => `${qty}x ${POTS.find(x=>x.id===id).n}`).join(", ");
-                return `<div class="item"><div><b>${q.n}</b><br><small>${q.desc}</small><br><small style="color:#ffca28;">Reward: ${rewards}</small></div><div style="text-align: right;"><span style="font-weight:bold; margin-right:10px; color:${rdy?'#00ffcc':'#aaa'};">${q.progress}/${q.target}</span><button onclick="claimQuest(${idx})" ${!rdy ? 'disabled' : ''} style="background:${rdy?'#00f5d4':'#444'}; color:#111;">Claim</button></div></div>`;
+                let rdy = q.progress >= q.target, 
+                    rewards = Object.entries(q.reward).map(([id, qty]) => `${qty}x ${POTS.find(x=>x.id===id)?.n || id}`).join(", ");
+                return `<div class="item">
+                    <div><b>${q.n}</b><br><small>${q.desc}</small><br><small style="color:#ffca28;">Reward: ${rewards}</small></div>
+                    <div style="text-align: right;">
+                        <span style="font-weight:bold; margin-right:10px; color:${rdy?'#00ffcc':'#aaa'};">${q.progress}/${q.target}</span>
+                        <button onclick="claimQuest(${idx})" ${!rdy ? 'disabled' : ''} style="background:${rdy?'#00f5d4':'#444'}; color:#111;">Claim</button>
+                    </div>
+                </div>`;
             }).join('');
         }
 
