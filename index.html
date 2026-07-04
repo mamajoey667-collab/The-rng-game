@@ -153,20 +153,27 @@
         } catch (err) { console.error("Firebase Initialization Failed: ", err); }
 
         const PATCH_NOTES = [
+            "[v7.3 QUEST UPDATE] Expanded quest systems! Integrated multi-faceted objective tracking across macro conditions, active biome alignments, consumption tracking modules, and macro-prestige verification data configurations.",
             "[v7.2 CONTENT] Added missing Solar (1/5,000) and Chromatic (1/15,000) auras. Added Solar Gauntlet and Chromatic Gauntlet to crafting blueprints. Patched CSS gradient text rendering bugs for cross-browser compatibility.",
             "[v7.1 HOTFIX] Fixed structural biome loop locks. Patched dynamic aura generation conditionals to process drop tables across changing environments correctly. Implemented safe configuration migrations for local database objects."
         ];
 
         const AURAS = [
-            { n: "Common", c: 2, col: "#fff" }, { n: "Uncommon", c: 5, col: "#82ff7a" },
-            { n: "Rare", c: 15, col: "#4cc9f0" }, { n: "Epic", c: 50, col: "#4361ee" },
-            { n: "Legendary", c: 200, col: "#f72585" }, { n: "Mythic", c: 1000, col: "#b5179e" }, 
+            { n: "Common", c: 2, col: "#fff" }, 
+            { n: "Uncommon", c: 5, col: "#82ff7a" },
+            { n: "Rare", c: 15, col: "#4cc9f0" }, 
+            { n: "Epic", c: 50, col: "#4361ee" },
+            { n: "Legendary", c: 200, col: "#f72585" }, 
+            { n: "Mythic", c: 1000, col: "#b5179e" }, 
             { n: "Glorious", c: 2500, col: "linear-gradient(45deg, #ffca28, #f72585)" },
             { n: "Solar", c: 5000, col: "linear-gradient(90deg, #ff9f1c, #ffbf69)" },
             { n: "Chromatic", c: 15000, col: "linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)" },
-            { n: "Water", c: 50, col: "#00b4d8", biome: "Rainy" }, { n: "Gloomy", c: 250, col: "#5c677d", biome: "Rainy" },
-            { n: "Stormy", c: 2500, col: "#ff9f1c", biome: "Rainy" }, { n: "Moonlight", c: 444, col: "#caf0f8", biome: "Nightfall" },
-            { n: "Lunar", c: 5000, col: "#9d4edd", biome: "Nightfall" }, { n: "Nebula", c: 27500, col: "linear-gradient(90deg, #7209b7, #f72585)", biome: "Nightfall" },
+            { n: "Water", c: 50, col: "#00b4d8", biome: "Rainy" },
+            { n: "Gloomy", c: 250, col: "#5c677d", biome: "Rainy" },
+            { n: "Stormy", c: 2500, col: "#ff9f1c", biome: "Rainy" },
+            { n: "Moonlight", c: 444, col: "#caf0f8", biome: "Nightfall" },
+            { n: "Lunar", c: 5000, col: "#9d4edd", biome: "Nightfall" },
+            { n: "Nebula", c: 27500, col: "linear-gradient(90deg, #7209b7, #f72585)", biome: "Nightfall" },
             { n: "Eclipse", c: 50000, col: "linear-gradient(90deg, #111, #ff4a4a, #111)", biome: "Eclipse" }
         ];
 
@@ -194,10 +201,15 @@
             { n: "Eclipse", bg: "#1c1111", border: "#ff4a4a", desc: "EXCLUSIVE AURA AVAILABILITY: Eclipse (1/50,000) unlocked!" }
         ];
 
+        // EXPANDED SYSTEM QUESTS WITH DIVERSE OBJECTIVES
         let quests = [
             { id: "q_rolls", n: "Novice Spinner", desc: "Total rolls executed", target: 50, reward: { speed_p: 2 }, progress: 0, step: 1 },
             { id: "q_epics", n: "Epic Collector", desc: "Collect Epic or better auras", target: 5, reward: { ultra_luck_p: 1 }, progress: 0, step: 1 },
-            { id: "q_legendary", n: "Legendary Hunter", desc: "Collect Legendary or better auras", target: 1, reward: { absolute_p: 1 }, progress: 0, step: 1 }
+            { id: "q_legendary", n: "Legendary Hunter", desc: "Collect Legendary or better auras", target: 1, reward: { absolute_p: 1 }, progress: 0, step: 1 },
+            { id: "q_potions", n: "Chug Master", desc: "Drink active potions to juice your stats", target: 8, reward: { super_luck_p: 2 }, progress: 0, step: 1 },
+            { id: "q_rainy", n: "Storm Chaser", desc: "Execute rolls explicitly inside the Rainy Biome", target: 30, reward: { speed_p: 2 }, progress: 0, step: 1 },
+            { id: "q_night", n: "Stargazer", desc: "Execute rolls explicitly during Nightfall", target: 30, reward: { luck_p: 3 }, progress: 0, step: 1 },
+            { id: "q_mythic", n: "Grandmaster Seeker", desc: "Roll Mythic or better extreme rarities", target: 1, reward: { godly_p: 1 }, progress: 0, step: 1 }
         ];
 
         let p = { 
@@ -315,7 +327,18 @@
                     AURAS.forEach(a => { if(p.inv[a.n] === undefined) p.inv[a.n] = 0; });
                     DOM.fCom.checked = !!p.filters.Common; DOM.fUnc.checked = !!p.filters.Uncommon; DOM.fRare.checked = !!p.filters.Rare;
                 }
-                if (parsed?.quests) quests = parsed.quests;
+                if (parsed?.quests) {
+                    // Data migration mapping to retain safety if schema array counts differ
+                    parsed.quests.forEach(savedQ => {
+                        let match = quests.find(q => q.id === savedQ.id);
+                        if (match) {
+                            match.progress = savedQ.progress;
+                            match.step = savedQ.step;
+                            match.target = savedQ.target;
+                            match.reward = savedQ.reward;
+                        }
+                    });
+                }
             } catch(e) {}
         }
 
@@ -365,11 +388,20 @@
             }
         }
 
+        // EXPANDED PROGRESSION TRACKING CORE FOR ALL QUEST MATRIX OBJECTIVES
         function trackQuestProgress(type, amt, val = 0) {
-            if (type === "roll") quests[0].progress += amt;
+            if (type === "roll") {
+                quests[0].progress += amt;
+                if (currentBiomeStr === "Rainy") quests[4].progress += amt;
+                if (currentBiomeStr === "Nightfall") quests[5].progress += amt;
+            }
             if (type === "aura") { 
                 if (val >= 50) quests[1].progress += amt; 
                 if (val >= 200) quests[2].progress += amt; 
+                if (val >= 1000) quests[6].progress += amt;
+            }
+            if (type === "potion") {
+                quests[3].progress += amt;
             }
         }
 
@@ -438,6 +470,7 @@
         function usePotion(id) {
             if (p.potInventory[id] > 0) {
                 p.potInventory[id]--; p.totalPotionsUsed++; let pt = POTS.find(x => x.id === id);
+                trackQuestProgress("potion", 1); // Triggers potion usage counter metric
                 if (pt.type === "charge") p.activeCharges.push(JSON.parse(JSON.stringify(pt)));
                 else { let e = p.activePots.find(x => x.id === id); if (e) e.dur += pt.dur; else p.activePots.push(JSON.parse(JSON.stringify(pt))); }
                 saveGame(); up();
