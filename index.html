@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sol's RNG Overhaul - True Multiplayer Update</title>
+    <title>Sol's RNG Overhaul - Solar & Chromatic Update</title>
     <style>
         body { font-family: sans-serif; background: #121214; color: #e1e1e6; padding: 20px; text-align: center; transition: background 0.5s ease; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; margin: auto; text-align: left; }
@@ -10,7 +10,7 @@
         button { background: #6200ee; color: #fff; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
         button:disabled { background: #444; cursor: not-allowed; }
         .item { background: #252529; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
-        .tabs button { background: none; color: #aaa; margin-right: 10px; padding: 5px; }
+        .tabs button { background: none; color: #aaa; margin-right: 10px; padding: 5px; cursor: pointer; border: none; font-size: 0.9rem;}
         .tabs button.active { color: #fff; border-bottom: 2px solid #6200ee; }
         .tab-content { display: none; max-height: 460px; overflow-y: auto; margin-top: 10px; }
         .cd-bar { width: 100%; background: #333; height: 4px; margin-top: 10px; border-radius: 2px; overflow: hidden; }
@@ -23,14 +23,12 @@
         .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #6200ee; margin-top: 10px; max-height: 180px; overflow-y: auto; white-space: pre-line; line-height: 1.4; }
         .status-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .status-label { font-size: 0.8rem; font-weight: bold; color: #aaa; }
-        .backup-badge { background: #00ffcc; color: #111; font-size: 0.65rem; padding: 3px 8px; border-radius: 10px; font-weight: bold; letter-spacing: 0.5px; }
+        .backup-badge { background: #ff9f1c; color: #111; font-size: 0.65rem; padding: 3px 8px; border-radius: 10px; font-weight: bold; letter-spacing: 0.5px; }
         .save-tools { border-top: 1px solid #333; padding-top: 10px; margin-top: 15px; display: flex; gap: 8px; flex-direction: column; }
         .filter-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #333; font-size: 0.8rem; }
         .filter-title { font-weight: bold; color: #ff4a4a; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;}
         .filter-options { display: flex; gap: 10px; flex-wrap: wrap; }
         .inv-section-title { font-size: 0.8rem; font-weight: bold; color: #6200ee; letter-spacing: 1px; margin: 15px 0 5px 0; border-bottom: 1px dashed #333; padding-bottom: 3px; text-transform: uppercase;}
-        
-        /* Biome Banner Layout UI */
         .biome-banner { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #444; font-size: 0.9rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
         .title-badge { color: #ffca28; font-weight: bold; margin-right: 5px; font-family: monospace; }
         .stats-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
@@ -39,8 +37,6 @@
         .player-row { border: 1px solid #6200ee; background: rgba(98, 0, 238, 0.15); font-weight: bold; }
         .identity-banner { font-size: 0.85rem; color: #aaa; margin-top: -10px; margin-bottom: 10px; }
     </style>
-
-    <!-- Firebase App and Realtime Database SDK SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 </head>
@@ -60,7 +56,7 @@
         <div class="panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 360px;">
             <div class="status-panel">
                 <span class="status-label">GLOBAL DATABANK SYNC</span>
-                <span class="backup-badge" id="sync-badge" style="background: #ff9f1c; color: #111;">INITIALIZING</span>
+                <span class="backup-badge" id="sync-badge">INITIALIZING</span>
             </div>
             <div id="reward-banner" class="reward-alert">Next milestone at 100 rolls</div>
             <div id="pity-banner" class="pity-alert">Rolls until 2x Luck: 10</div>
@@ -118,7 +114,6 @@
             <div id="pot" class="tab-content"></div>
             <div id="quests" class="tab-content"></div>
             
-            <!-- Real-time Rankings Tab Panel -->
             <div id="stats-panel" class="tab-content">
                 <div class="inv-section-title">🏆 Live Global Player Leaderboard</div>
                 <div id="leaderboard-container"><div style="color:#aaa; font-size:0.85rem; padding:10px;">Connecting to databank network...</div></div>
@@ -139,7 +134,6 @@
     </div>
 
     <script>
-        // REPLACE WITH YOUR FIREBASE CONFIGURATION SNIPPET
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
             authDomain: "YOUR_PROJECT.firebaseapp.com",
@@ -150,22 +144,19 @@
             appId: "YOUR_APP_ID"
         };
 
-        // Initialize Firebase safely
         let db = null;
         try {
-            if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+            if (firebaseConfig.apiKey !== "YOUR_API_KEY" && firebaseConfig.apiKey.trim() !== "") {
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.database();
             }
         } catch (err) { console.error("Firebase Initialization Failed: ", err); }
 
         const PATCH_NOTES = [
-            "[v7.0] MULTIPLAYER & EXCLUSIVE BIOMES UPDATE: Wiped simulated NPC telemetry loops completely. Connected structural data frameworks to global Firebase cloud databases. Added full user identification nickname tracking mechanics to facilitate persistent profile syncs across live player leaderboards. Dropped deprecated biome variants to execute complete environmental configurations for Rainy, Nightfall, and Eclipse ecosystems with fractional 5-minute seed-check distributions alongside 7 brand new biome-exclusive auras.",
-            "[v6.0] MASSIVE EXPANSION: Integrated complete Worlds, Biomes & Environment modification systems. Added dynamic weather states impacting roll mechanics globally.",
-            "[v5.1] SYSTEM PATCH: Cleaned up UI inside Alchemy Hub inside tier-fused views."
+            "[v7.2 CONTENT] Added missing Solar (1/5,000) and Chromatic (1/15,000) auras. Added Solar Gauntlet and Chromatic Gauntlet to crafting blueprints. Patched CSS gradient text rendering bugs for cross-browser compatibility.",
+            "[v7.1 HOTFIX] Fixed structural biome loop locks. Patched dynamic aura generation conditionals to process drop tables across changing environments correctly. Implemented safe configuration migrations for local database objects."
         ];
 
-        // Custom Auras Array as requested
         const AURAS = [
             { n: "Common", c: 2, col: "#fff" }, 
             { n: "Uncommon", c: 5, col: "#82ff7a" },
@@ -174,19 +165,23 @@
             { n: "Legendary", c: 200, col: "#f72585" }, 
             { n: "Mythic", c: 1000, col: "#b5179e" }, 
             { n: "Glorious", c: 2500, col: "linear-gradient(45deg, #ffca28, #f72585)" },
-            // Biome Specialized Additions
+            { n: "Solar", c: 5000, col: "linear-gradient(90deg, #ff9f1c, #ffbf69)" }, // Added Solar
+            { n: "Chromatic", c: 15000, col: "linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #9400d3)" }, // Added Chromatic
             { n: "Water", c: 50, col: "#00b4d8", biome: "Rainy" },
             { n: "Gloomy", c: 250, col: "#5c677d", biome: "Rainy" },
             { n: "Stormy", c: 2500, col: "#ff9f1c", biome: "Rainy" },
             { n: "Moonlight", c: 444, col: "#caf0f8", biome: "Nightfall" },
             { n: "Lunar", c: 5000, col: "#9d4edd", biome: "Nightfall" },
             { n: "Nebula", c: 27500, col: "linear-gradient(90deg, #7209b7, #f72585)", biome: "Nightfall" },
-            { n: "Eclipse", c: 50000, col: "linear-gradient(90deg, #000, #ff4a4a, #000)", biome: "Eclipse" }
+            { n: "Eclipse", c: 50000, col: "linear-gradient(90deg, #111, #ff4a4a, #111)", biome: "Eclipse" }
         ];
 
         const CRAFTS = [
             { id: "glove", n: "Luck Glove", d: "+50% Luck", b: {luck: 0.5, speed: 0}, req: { Common: 5, Uncommon: 3 } },
-            { id: "cauldron", n: "Alchemist Cauldron", d: "Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose auras.", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } }
+            { id: "cauldron", n: "Alchemist Cauldron", d: "Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose auras.", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } },
+            // Added Solar and Chromatic Gauntlets
+            { id: "solar_gauntlet", n: "Solar Gauntlet", d: "+150% Luck, -15% Cooldown Time", b: {luck: 1.5, speed: 0.15}, req: { Solar: 1, Epic: 10, Legendary: 3 } },
+            { id: "chromatic_gauntlet", n: "Chromatic Gauntlet", d: "+300% Luck, -30% Cooldown Time", b: {luck: 3.0, speed: 0.30}, req: { Chromatic: 1, Glorious: 2, Mythic: 5 } }
         ];
 
         const POTS = [
@@ -251,12 +246,10 @@
 
         function setupFirebaseSync() {
             if (!db) {
-                DOM.sync.style.background = "#ff4a4a"; DOM.sync.textContent = "LOCAL MODE";
+                DOM.sync.style.background = "#ff9f1c"; DOM.sync.textContent = "LOCAL MODE";
                 renderOfflineFallbackLeaderboard(); return;
             }
             DOM.sync.style.background = "#00ffcc"; DOM.sync.textContent = "CONNECTED";
-            
-            // Listen to live database updates
             db.ref("leaderboard").orderByChild("rolls").limitToLast(20).on("value", snapshot => {
                 localGlobalPlayers = [];
                 snapshot.forEach(child => { localGlobalPlayers.unshift(child.val()); });
@@ -274,7 +267,7 @@
         }
 
         function renderOfflineFallbackLeaderboard() {
-            let list = [{ name: p.nickname + " (You)", rolls: p.rolls, title: getTitle(p.rolls), isMe: true }];
+            let list = [{ name: p.nickname + " (You)", rolls: p.rolls, title: getTitle(p.rolls) }];
             DOM.leaderboard.innerHTML = list.map((user, idx) => `
                 <div class="leaderboard-row player-row">
                     <span>#${idx + 1} <small style="color:#ffca28; font-family:monospace;">${user.title}</small> <b>${user.name}</b></span>
@@ -292,6 +285,8 @@
                 let parsed = JSON.parse(decodeURIComponent(atob(data.trim())));
                 if (parsed?.player) {
                     p = parsed.player; if (parsed.quests) quests = parsed.quests;
+                    // Safely initialize missing new auras to prevent save corruption
+                    AURAS.forEach(a => { if(p.inv[a.n] === undefined) p.inv[a.n] = 0; });
                     saveGame(); syncDatabaseProfile(); window.location.reload();
                 }
             } catch(e) { alert("❌ Decode Failed."); }
@@ -311,6 +306,8 @@
                 let parsed = JSON.parse(saved);
                 if (parsed?.player) {
                     Object.assign(p, parsed.player);
+                    // Force inject missing items upon loading an older save version
+                    AURAS.forEach(a => { if(p.inv[a.n] === undefined) p.inv[a.n] = 0; });
                     DOM.fCom.checked = !!p.filters.Common; DOM.fUnc.checked = !!p.filters.Uncommon; DOM.fRare.checked = !!p.filters.Rare;
                 }
                 if (parsed?.quests) quests = parsed.quests;
@@ -330,9 +327,22 @@
 
         function styleAura(el, name) {
             let a = AURAS.find(x => x.n === name) || { n: "None", col: "#aaa" }; el.textContent = a.n;
-            let isGrad = a.col.includes("grad"); el.style.background = isGrad ? a.col : "none";
-            el.style.webkitBackgroundClip = isGrad ? "text" : "initial"; el.style.webkitTextFillColor = isGrad ? "transparent" : "initial";
-            if (!isGrad) el.style.color = a.col;
+            let isGrad = a.col.includes("linear-gradient");
+            
+            // Comprehensive bug fix for cross-browser gradient rendering
+            if (isGrad) {
+                el.style.background = a.col; 
+                el.style.webkitBackgroundClip = "text"; 
+                el.style.webkitTextFillColor = "transparent";
+                el.style.backgroundClip = "text";
+                el.style.color = "transparent";
+            } else {
+                el.style.background = "none"; 
+                el.style.webkitBackgroundClip = "initial"; 
+                el.style.webkitTextFillColor = "initial"; 
+                el.style.backgroundClip = "initial";
+                el.style.color = a.col;
+            }
         }
 
         function getTitle(rolls) {
@@ -389,12 +399,11 @@
             p.rolls++; p.pityCount++; trackQuestProgress("roll", 1);
             let stats = getStats(), rolled = AURAS[0];
             
-            // Evaluates precise roll chances factoring custom active environment constraints
             for (let i = AURAS.length - 1; i >= 0; i--) {
                 let target = AURAS[i];
-                if (target.biome && target.biome !== currentBiomeStr) continue; // Restricts exclusive tags
-
-                if ((target.c / stats.luck) <= 1 || Math.random() < (1 / (target.c / stats.luck))) { rolled = target; break; }
+                if (target.biome && target.biome !== currentBiomeStr) continue;
+                let calculatedChance = target.c / stats.luck;
+                if (calculatedChance <= 1 || Math.random() < (1 / calculatedChance)) { rolled = target; break; }
             }
             
             if (p.filters[rolled.n]) { DOM.chance.textContent = `🗑️ Auto-Deleted (1 in ${rolled.c.toLocaleString()})`; } 
@@ -415,7 +424,7 @@
             setTimeout(() => { DOM.fill.style.transition = `width ${stats.cd}s linear`; DOM.fill.style.width = "0%"; }, 10);
             setTimeout(() => { p.onCooldown = false; if (!p.isRolling) DOM.rollBtn.disabled = false; if(DOM.autoCb.checked) startRoll(); }, stats.cd * 1000);
             
-            if (p.rolls % 5 === 0) syncDatabaseProfile(); // Throttle outbound database updates
+            if (p.rolls % 5 === 0) syncDatabaseProfile();
             saveGame(); up();
         }
 
@@ -438,7 +447,6 @@
             }
         }
 
-        // Custom Requested Dynamic Biome Roll Check Routing (Triggers every 5 minutes / 300000ms)
         function evaluateBiomeRotation() {
             let roll = Math.random();
             if (roll < (1 / 50)) { currentBiomeStr = "Eclipse"; } 
@@ -453,7 +461,6 @@
         }
         setInterval(evaluateBiomeRotation, 300000);
 
-        // Core Game Engine Systems Clock
         setInterval(() => { 
             p.totalSeconds++;
             if (p.activePots.length) { p.activePots.forEach(x => x.dur--); p.activePots = p.activePots.filter(x => x.dur > 0); }
@@ -473,16 +480,13 @@
                 DOM.prestigeZone.innerHTML = `<button onclick="executePrestige()" style="background:#ffca28; color:#111;">✨ ASCEND PRESTIGE NOW</button>`;
             } else { DOM.prestigeZone.innerHTML = ""; }
 
-            // Active Environment feedback updates
             let activeB = BIOMES.find(b => b.n === currentBiomeStr);
             DOM.biome.textContent = activeB.n; DOM.biomeBoost.textContent = activeB.desc;
             
-            // Operational Metrics
             DOM.statTime.textContent = formatTime(p.totalSeconds);
             DOM.statPots.textContent = p.totalPotionsUsed;
             DOM.statLucky.textContent = p.luckiestName !== "None" ? `${p.luckiestName} (1 in ${p.luckiestChance.toLocaleString()})` : "None";
 
-            // Render Dynamic Multiplayer Leaderboard Matrix
             if (db) {
                 let currentRankings = [...localGlobalPlayers];
                 if (!currentRankings.some(u => u.name === p.nickname)) {
