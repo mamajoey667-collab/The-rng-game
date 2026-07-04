@@ -11,7 +11,7 @@
         .item { background: #252529; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
         .tabs button { background: none; color: #aaa; margin-right: 10px; padding: 5px; }
         .tabs button.active { color: #fff; border-bottom: 2px solid #6200ee; }
-        .tab-content { display: none; max-height: 350px; overflow-y: auto; margin-top: 10px; }
+        .tab-content { display: none; max-height: 420px; overflow-y: auto; margin-top: 10px; }
         .cd-bar { width: 100%; background: #333; height: 4px; margin-top: 10px; border-radius: 2px; overflow: hidden; }
         .cd-fill { height: 100%; background: #6200ee; width: 0%; transition: width linear; }
         .auto-box { margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: bold; }
@@ -19,7 +19,7 @@
         .auto-box input { width: 16px; height: 16px; cursor: pointer; }
         .reward-alert { color: #ffca28; font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; min-height: 20px; text-align: center;}
         .pity-alert { color: #00ffcc; font-weight: bold; font-size: 0.85rem; margin-bottom: 10px; }
-        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #b5179e; margin-top: 10px; max-height: 120px; overflow-y: auto;}
+        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #00f5d4; margin-top: 10px; max-height: 120px; overflow-y: auto;}
         
         .status-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .status-label { font-size: 0.8rem; font-weight: bold; color: #aaa; }
@@ -30,6 +30,8 @@
         .filter-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #333; font-size: 0.8rem; }
         .filter-title { font-weight: bold; color: #ff4a4a; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;}
         .filter-options { display: flex; gap: 10px; flex-wrap: wrap; }
+        
+        .inv-section-title { font-size: 0.8rem; font-weight: bold; color: #6200ee; letter-spacing: 1px; margin: 15px 0 5px 0; border-bottom: 1px dashed #333; padding-bottom: 3px; text-transform: uppercase;}
     </style>
 </head>
 <body>
@@ -63,9 +65,9 @@
 
         <div class="panel">
             <div class="tabs">
-                <button onclick="tab('inv')" class="t-btn active">Inv</button>
-                <button onclick="tab('craft')" class="t-btn">Craft</button>
-                <button onclick="tab('pot')" class="t-btn">Potions</button>
+                <button onclick="tab('inv')" class="t-btn active">Inventory</button>
+                <button onclick="tab('craft')" class="t-btn">Blueprints</button>
+                <button onclick="tab('pot')" class="t-btn">Alchemy Hub</button>
                 <button onclick="tab('quests')" class="t-btn" style="color: #ffca28;">Quests</button>
             </div>
             
@@ -79,7 +81,15 @@
                     </div>
                 </div>
                 
-                <div id="inv-list"></div>
+                <div class="inv-section-title">✨ Auras Owned</div>
+                <div id="inv-auras-list"></div>
+
+                <div class="inv-section-title">🧪 Potions Held</div>
+                <div id="inv-potions-list"></div>
+
+                <div class="inv-section-title">🛠️ Gears Crafted</div>
+                <div id="inv-gears-list"></div>
+                
                 <div class="save-tools">
                     <button onclick="exportSave()" style="background:#4361ee;">📤 Export Save Data String</button>
                     <button onclick="importSave()" style="background:#ff9f1c; color: #111;">📥 Import Save Data String</button>
@@ -92,9 +102,9 @@
     </div>
 
     <div class="panel" style="max-width: 1000px; margin: 20px auto 0 auto;">
-        <h4 style="margin: 0 0 5px 0; color: #b5179e;">📋 Patch Notes</h4>
+        <h4 style="margin: 0 0 5px 0; color: #00f5d4;">📋 Patch Notes</h4>
         <div class="log-box">
-            [v4.0] THE ALCHEMY UPDATE: Added potion fusion system! Upgrade lower potions into hyper-tier buffs. Added craftable "Alchemist Cauldron" utility gear that auto-brews Lucky Potions on your active background rolls.
+            [v5.0] VAULT SYSTEM OVERHAUL: Rebuilt inventory from the ground up into three dedicated chambers (Auras, Potions, and Gears). Gears are now permanent, unique one-time crafts and can be dynamically equipped/unequipped via your armory.
         </div>
     </div>
 
@@ -135,6 +145,7 @@
             pityCount: 0,
             inv: {}, 
             potInventory: { luck_p: 0, super_luck_p: 0, ultra_luck_p: 0, godly_p: 0, absolute_p: 0, transcendant_p: 0, speed_p: 0 }, 
+            craftedGears: [],
             gear: null, 
             activePots: [], 
             activeCharges: [], 
@@ -163,6 +174,7 @@
                 if (parsed && parsed.player) {
                     p = parsed.player;
                     if (parsed.quests) quests = parsed.quests;
+                    if (!p.craftedGears) p.craftedGears = p.gear ? [p.gear] : [];
                     if (p.cauldronProgress === undefined) p.cauldronProgress = 0;
                     
                     document.getElementById("f-common").checked = p.filters?.Common || false;
@@ -204,6 +216,7 @@
                     p.rolls = parsed.player.rolls || 0;
                     p.pityCount = parsed.player.pityCount || 0;
                     p.gear = parsed.player.gear || null;
+                    p.craftedGears = parsed.player.craftedGears || (p.gear ? [p.gear] : []);
                     p.activePots = parsed.player.activePots || [];
                     p.activeCharges = parsed.player.activeCharges || [];
                     p.equippedAura = parsed.player.equippedAura || parsed.player.bestAura || "None";
@@ -231,9 +244,12 @@
         function getStats() {
             let s = { luck: 1.0, speedMod: 1.0, cd: 1.5 }; 
             if (p.gear) {
-                let g = CRAFTS.find(c => c.id === p.gear).b;
-                s.luck += g.luck;
-                if(g.speed) s.speedMod *= (1 - g.speed);
+                let found = CRAFTS.find(c => c.id === p.gear);
+                if (found) {
+                    let g = found.b;
+                    s.luck += g.luck;
+                    if(g.speed) s.speedMod *= (1 - g.speed);
+                }
             }
             p.activePots.forEach(pot => {
                 s.luck += pot.b.luck;
@@ -292,6 +308,15 @@
             saveGame(); up();
         }
 
+        function toggleGear(gearId) {
+            if (p.gear === gearId) {
+                p.gear = null;
+            } else {
+                if (p.craftedGears.includes(gearId)) p.gear = gearId;
+            }
+            saveGame(); up();
+        }
+
         function combinePotion(targetId) {
             let pt = POTS.find(x => x.id === targetId);
             if (!pt || !pt.fuseFrom) return;
@@ -337,7 +362,6 @@
                 document.getElementById("a-chance").textContent = `1 in ${rolled.c.toLocaleString()}`;
             }
             
-            // Execute Auto-Brewing Cauldron Check
             if (p.gear === "cauldron") {
                 p.cauldronProgress++;
                 if (p.cauldronProgress >= 50) {
@@ -379,7 +403,19 @@
         function checkAutoRoll() { if(document.getElementById("auto-roll-cb").checked && !p.isRolling && !p.onCooldown) startRoll(); }
         function has(req) { return Object.entries(req).every(([k, v]) => (p.inv[k] || 0) >= v); }
         function take(req) { Object.entries(req).forEach(([k, v]) => p.inv[k] -= v); }
-        function craft(id) { let g = CRAFTS.find(c => c.id === id); if (has(g.req)) { take(g.req); p.gear = id; p.cauldronProgress = 0; saveGame(); up(); } }
+        
+        function craft(id) { 
+            let g = CRAFTS.find(c => c.id === id); 
+            if (g && !p.craftedGears.includes(id) && has(g.req)) { 
+                take(g.req); 
+                p.craftedGears.push(id);
+                p.gear = id; // Auto-equip on first craft
+                p.cauldronProgress = 0; 
+                saveGame(); 
+                up(); 
+            } 
+        }
+        
         function brew(id) { let pt = POTS.find(x => x.id === id); if (has(pt.req)) { take(pt.req); p.potInventory[id]++; saveGame(); up(); } }
 
         function usePotion(id) {
@@ -408,7 +444,9 @@
             document.getElementById("r-count").textContent = p.rolls;
             document.getElementById("r-luck").textContent = stats.luck.toFixed(1);
             document.getElementById("r-speed").textContent = stats.cd.toFixed(2);
-            document.getElementById("r-gear").textContent = p.gear ? CRAFTS.find(c => c.id === p.gear).n : "None";
+            
+            let activeGearObj = p.gear ? CRAFTS.find(c => c.id === p.gear) : null;
+            document.getElementById("r-gear").textContent = activeGearObj ? activeGearObj.n : "None";
             
             if (p.equippedAura !== "None" && (!p.inv[p.equippedAura] || p.inv[p.equippedAura] <= 0)) {
                 p.equippedAura = "None";
@@ -419,35 +457,50 @@
             if (p.activeCharges.length > 0) displayPots.push(`🌟 Charged Rolls Queued: ${p.activeCharges.length}`);
             document.getElementById("p-timer").innerHTML = displayPots.length > 0 ? displayPots.join("<br>") : "";
 
-            document.getElementById("inv-list").innerHTML = AURAS.map(a => {
-                if (!p.inv[a.n]) return '';
+            // --- RENDER SEPARATED INVENTORY TAB ---
+            // 1. Auras
+            let visibleAuras = AURAS.filter(a => p.inv[a.n] > 0);
+            document.getElementById("inv-auras-list").innerHTML = visibleAuras.length ? visibleAuras.map(a => {
                 let isEquipped = p.equippedAura === a.n;
-                let btnText = isEquipped ? "Unequip" : "Equip";
-                let btnBg = isEquipped ? "#c94c4c" : "#00b4d8";
-                return `<div class="item"><div><b style="color:${a.col.includes('grad') ? '#fff' : a.col}">${a.n}</b><br><small style="color:#aaa;">Rarity: 1 in ${a.c.toLocaleString()}</small></div><div style="display:flex; gap:10px; align-items:center;"><b>x${p.inv[a.n]}</b><button onclick="toggleEquip('${a.n}')" style="background:${btnBg}; padding:4px 8px; font-size:0.75rem;">${btnText}</button></div></div>`;
-            }).join('');
+                return `<div class="item"><div><b style="color:${a.col.includes('grad') ? '#fff' : a.col}">${a.n}</b><br><small style="color:#aaa;">Rarity: 1 in ${a.c.toLocaleString()}</small></div><div style="display:flex; gap:10px; align-items:center;"><b>x${p.inv[a.n]}</b><button onclick="toggleEquip('${a.n}')" style="background:${isEquipped ? '#c94c4c' : '#00b4d8'}; padding:4px 8px; font-size:0.75rem;">${isEquipped ? 'Unequip' : 'Equip'}</button></div></div>`;
+            }).join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No auras collected yet.</div>';
             
+            // 2. Potions 
+            let visiblePots = POTS.filter(pt => (p.potInventory[pt.id] || 0) > 0);
+            document.getElementById("inv-potions-list").innerHTML = visiblePots.length ? visiblePots.map(pt => {
+                let qty = p.potInventory[pt.id];
+                return `<div class="item"><div><b>${pt.n}</b><br><small style="color:#aaa;">${pt.d}</small></div><div style="display:flex; gap:10px; align-items:center;"><b>x${qty}</b><button onclick="usePotion('${pt.id}')" style="background:#00b4d8; padding:4px 8px; font-size:0.75rem;">Use</button></div></div>`;
+            }).join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No potions inside vault.</div>';
+
+            // 3. Gears Crafted
+            document.getElementById("inv-gears-list").innerHTML = p.craftedGears.length ? p.craftedGears.map(gId => {
+                let g = CRAFTS.find(x => x.id === gId);
+                let isCurrent = p.gear === gId;
+                return `<div class="item"><div><b>${g.n}</b><br><small style="color:#aaa;">${g.d}</small></div><button onclick="toggleGear('${gId}')" style="background:${isCurrent ? '#c94c4c' : '#00ffcc'}; color:${isCurrent ? '#fff' : '#111'}; padding:4px 8px; font-size:0.75rem;">${isCurrent ? 'Unequip' : 'Equip'}</button></div>`;
+            }).join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No equipment forged yet.</div>';
+            
+            // --- RENDER BLUEPRINTS TAB ---
             document.getElementById("craft").innerHTML = CRAFTS.map(c => {
+                let alreadyOwns = p.craftedGears.includes(c.id);
                 let req = Object.entries(c.req).map(([k,v]) => `${k}:${p.inv[k] || 0}/${v}`).join(", ");
-                return `<div class="item"><div><b>${c.n}</b><br><small>${c.d} (${req})</small></div><button onclick="craft('${c.id}')" ${!has(c.req) || p.gear===c.id ? 'disabled' : ''}>${p.gear===c.id?'Eq':'Craft'}</button></div>`;
+                return `<div class="item"><div><b>${c.n}</b> ${alreadyOwns ? '<span style="color:#00ffcc; font-size:0.75rem;">[UNLOCKED]</span>':''}<br><small>${c.d} (${req})</small></div><button onclick="craft('${c.id}')" ${!has(c.req) || alreadyOwns ? 'disabled' : ''}>${alreadyOwns ? 'Owned' : 'Forge'}</button></div>`;
             }).join('');
 
+            // --- RENDER ALCHEMY HUB TAB ---
             document.getElementById("pot").innerHTML = POTS.map(pt => {
                 let qty = p.potInventory[pt.id] || 0;
                 let req = Object.entries(pt.req).map(([k,v]) => `${k}:${p.inv[k] || 0}/${v}`).join(", ");
-                
-                // Construct fusion text if potion can be upgraded from previous tier
                 let fusionInterface = "";
                 if (pt.fuseFrom) {
                     let srcName = POTS.find(x => x.id === pt.fuseFrom.id).n;
                     let currentSrcCount = p.potInventory[pt.fuseFrom.id] || 0;
                     let canFuse = currentSrcCount >= pt.fuseFrom.qty;
-                    fusionInterface = `<button onclick="combinePotion('${pt.id}')" ${!canFuse ? 'disabled' : ''} style="background:#ff9f1c; color:#111; margin-left:5px;">Fuse (${currentSrcCount}/${pt.fuseFrom.qty} ${srcName})</button>`;
+                    fusionInterface = `<button onclick="combinePotion('${pt.id}')" ${!canFuse ? 'disabled' : ''} style="background:#ff9f1c; color:#111; margin-left:5px;">Fuse (${currentSrcCount}/${pt.fuseFrom.qty})</button>`;
                 }
-
-                return `<div class="item"><div><b>${pt.n} (Owned: ${qty})</b><br><small>${pt.d}</small><br><small style="color:#aaa;">Requires: ${req}</small></div><div style="display:flex; gap:5px; align-items:center;"><button onclick="brew('${pt.id}')" ${!has(pt.req) ? 'disabled' : ''}>Brew</button>${fusionInterface}<button onclick="usePotion('${pt.id}')" ${qty === 0 ? 'disabled' : ''} style="background:#00b4d8;">Use</button></div></div>`;
+                return `<div class="item"><div><b>${pt.n} (Owned: ${qty})</b><br><small>${pt.d}</small><br><small style="color:#aaa;">Requires: ${req}</small></div><div style="display:flex; gap:5px; align-items:center;"><button onclick="brew('${pt.id}')" ${!has(pt.req) ? 'disabled' : ''}>Brew</button>${fusionInterface}</div></div>`;
             }).join('');
 
+            // --- RENDER QUESTS ---
             document.getElementById("quests").innerHTML = quests.map((q, idx) => {
                 let ready = q.progress >= q.target;
                 let rewardsList = Object.entries(q.reward).map(([id, qty]) => `${qty}x ${POTS.find(x=>x.id===id).n}`).join(", ");
