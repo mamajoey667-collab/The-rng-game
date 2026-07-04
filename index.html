@@ -202,7 +202,8 @@
 
         let quests = [
             { id: "q_rolls", n: "Novice Spinner", desc: "Total rolls executed", target: 50, reward: { speed_p: 2 }, progress: 0, step: 1 },
-            { id: "q_epics", n: "Epic Collector", desc: "Collect Epic or better auras", target: 5, reward: { ultra_luck_p: 1 }, progress: 0, step: 1 }
+            { id: "q_epics", n: "Epic Collector", desc: "Collect Epic or better auras", target: 5, reward: { ultra_luck_p: 1 }, progress: 0, step: 1 },
+            { id: "q_legendary", n: "Legendary Hunter", desc: "Collect Legendary or better auras", target: 1, reward: { absolute_p: 1 }, progress: 0, step: 1 }
         ];
 
         let p = { 
@@ -372,7 +373,10 @@
 
         function trackQuestProgress(type, amt, val = 0) {
             if (type === "roll") quests[0].progress += amt;
-            if (type === "aura") { if (val >= 50) quests[1].progress += amt; }
+            if (type === "aura") { 
+                if (val >= 50) quests[1].progress += amt; 
+                if (val >= 200) quests[2].progress += amt; 
+            }
         }
 
         function claimQuest(idx) {
