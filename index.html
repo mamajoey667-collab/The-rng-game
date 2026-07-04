@@ -19,7 +19,7 @@
         .auto-box input { width: 16px; height: 16px; cursor: pointer; }
         .reward-alert { color: #ffca28; font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; min-height: 20px; text-align: center;}
         .pity-alert { color: #00ffcc; font-weight: bold; font-size: 0.85rem; margin-bottom: 10px; }
-        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #ff007f; margin-top: 10px; max-height: 120px; overflow-y: auto;}
+        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #b5179e; margin-top: 10px; max-height: 120px; overflow-y: auto;}
         
         .status-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         .status-label { font-size: 0.8rem; font-weight: bold; color: #aaa; }
@@ -57,6 +57,7 @@
             
             <div class="cd-bar"><div id="cd-fill" class="cd-fill"></div></div>
             <div id="p-timer" style="color: #00ffcc; margin-top: 10px; font-size: 0.85rem; white-space: pre-line;"></div>
+            <div id="cauldron-alert" style="color: #ff9f1c; font-size: 0.75rem; font-weight: bold; margin-top: 5px;"></div>
             <button onclick="resetGame()" style="background:#c94c4c; margin-top:25px; font-size:0.75rem; padding:4px 8px; opacity:0.4; border-radius: 4px;">Hard Reset Data</button>
         </div>
 
@@ -91,9 +92,9 @@
     </div>
 
     <div class="panel" style="max-width: 1000px; margin: 20px auto 0 auto;">
-        <h4 style="margin: 0 0 5px 0; color: #ff007f;">📋 Patch Notes</h4>
+        <h4 style="margin: 0 0 5px 0; color: #b5179e;">📋 Patch Notes</h4>
         <div class="log-box">
-            [v3.1] INVENTORY OVERHAUL: Replaced automated aura titles with a full manual equipment cosmetic engine. Players can now freely click 'Equip' on any possessed aura inside their inventory panels.
+            [v4.0] THE ALCHEMY UPDATE: Added potion fusion system! Upgrade lower potions into hyper-tier buffs. Added craftable "Alchemist Cauldron" utility gear that auto-brews Lucky Potions on your active background rolls.
         </div>
     </div>
 
@@ -108,18 +109,19 @@
 
         const CRAFTS = [
             { id: "glove", n: "Luck Glove", d: "+50% Luck", b: {luck: 0.5, speed: 0}, req: { Common: 5, Uncommon: 3 } },
+            { id: "cauldron", n: "Alchemist Cauldron", d: "Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose auras.", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } },
             { id: "device", n: "Solar Device", d: "+200% Luck", b: {luck: 2.0, speed: 0}, req: { Rare: 10, Solar: 1 } },
             { id: "chroma", n: "Chroma Glove", d: "+500% Luck, -0.5s Cooldown", b: {luck: 5.0, speed: 0.334}, req: { CHROMATIC: 1, Common: 250, Legendary: 10 } }
         ];
 
         const POTS = [
-            { id: "luck_p", n: "Lucky Potion", d: "+50% Luck (10m)", type: "time", dur: 600, b: {luck: 0.5, speed: 0}, req: { Common: 3, Uncommon: 1 } },
-            { id: "super_luck_p", n: "Super Lucky Potion", d: "+150% Luck (10m)", type: "time", dur: 600, b: {luck: 1.5, speed: 0}, req: { Common: 10, Uncommon: 5, Rare: 1 } },
-            { id: "ultra_luck_p", n: "Ultra Lucky Potion", d: "+300% Luck (10m)", type: "time", dur: 600, b: {luck: 3.0, speed: 0}, req: { Uncommon: 10, Rare: 5, Epic: 1 } },
-            { id: "godly_p", n: "Godly Potion", d: "+1500% Luck (5m)", type: "time", dur: 300, b: {luck: 15.0, speed: 0}, req: { Epic: 10, Legendary: 5, Mythic: 1 } },
-            { id: "absolute_p", n: "ABSOLUTE Potion", d: "+1000x Luck on NEXT Roll", type: "charge", dur: 1, b: {luck: 1000.0, speed: 0}, req: { Common: 100, Mythic: 10, Glorious: 1 } },
-            { id: "transcendant_p", n: "TRANSCENDANT Potion", d: "+10000x Luck on NEXT Roll", type: "charge", dur: 1, b: {luck: 10000.0, speed: 0}, req: { Common: 1000, Mythic: 30, Glorious: 10, Transcendant: 1 } },
-            { id: "speed_p", n: "Haste Potion", d: "Halves Roll Cooldown (10m)", type: "time", dur: 600, b: {luck: 0, speed: 0.5}, req: { Common: 4, Rare: 1 } }
+            { id: "luck_p", n: "Lucky Potion", d: "+50% Luck (10m)", type: "time", dur: 600, b: {luck: 0.5, speed: 0}, req: { Common: 3, Uncommon: 1 }, fuseFrom: null },
+            { id: "super_luck_p", n: "Super Lucky Potion", d: "+150% Luck (10m)", type: "time", dur: 600, b: {luck: 1.5, speed: 0}, req: { Common: 10, Uncommon: 5, Rare: 1 }, fuseFrom: { id: "luck_p", qty: 3 } },
+            { id: "ultra_luck_p", n: "Ultra Lucky Potion", d: "+300% Luck (10m)", type: "time", dur: 600, b: {luck: 3.0, speed: 0}, req: { Uncommon: 10, Rare: 5, Epic: 1 }, fuseFrom: { id: "super_luck_p", qty: 3 } },
+            { id: "godly_p", n: "Godly Potion", d: "+1500% Luck (5m)", type: "time", dur: 300, b: {luck: 15.0, speed: 0}, req: { Epic: 10, Legendary: 5, Mythic: 1 }, fuseFrom: { id: "ultra_luck_p", qty: 3 } },
+            { id: "absolute_p", n: "ABSOLUTE Potion", d: "+1000x Luck on NEXT Roll", type: "charge", dur: 1, b: {luck: 1000.0, speed: 0}, req: { Common: 100, Mythic: 10, Glorious: 1 }, fuseFrom: { id: "godly_p", qty: 2 } },
+            { id: "transcendant_p", n: "TRANSCENDANT Potion", d: "+10000x Luck on NEXT Roll", type: "charge", dur: 1, b: {luck: 10000.0, speed: 0}, req: { Common: 1000, Mythic: 30, Glorious: 10, Transcendant: 1 }, fuseFrom: { id: "absolute_p", qty: 2 } },
+            { id: "speed_p", n: "Haste Potion", d: "Halves Roll Cooldown (10m)", type: "time", dur: 600, b: {luck: 0, speed: 0.5}, req: { Common: 4, Rare: 1 }, fuseFrom: null }
         ];
 
         let quests = [
@@ -139,7 +141,8 @@
             isRolling: false, 
             onCooldown: false,
             equippedAura: "None",
-            filters: { Common: false, Uncommon: false, Rare: false }
+            filters: { Common: false, Uncommon: false, Rare: false },
+            cauldronProgress: 0
         };
         AURAS.forEach(a => p.inv[a.n] = 0);
 
@@ -160,6 +163,7 @@
                 if (parsed && parsed.player) {
                     p = parsed.player;
                     if (parsed.quests) quests = parsed.quests;
+                    if (p.cauldronProgress === undefined) p.cauldronProgress = 0;
                     
                     document.getElementById("f-common").checked = p.filters?.Common || false;
                     document.getElementById("f-uncommon").checked = p.filters?.Uncommon || false;
@@ -204,6 +208,7 @@
                     p.activeCharges = parsed.player.activeCharges || [];
                     p.equippedAura = parsed.player.equippedAura || parsed.player.bestAura || "None";
                     p.filters = parsed.player.filters || { Common: false, Uncommon: false, Rare: false };
+                    p.cauldronProgress = parsed.player.cauldronProgress || 0;
                     
                     if (parsed.player.inv) Object.keys(parsed.player.inv).forEach(k => p.inv[k] = parsed.player.inv[k]);
                     if (parsed.player.potInventory) Object.keys(parsed.player.potInventory).forEach(k => p.potInventory[k] = parsed.player.potInventory[k]);
@@ -287,6 +292,19 @@
             saveGame(); up();
         }
 
+        function combinePotion(targetId) {
+            let pt = POTS.find(x => x.id === targetId);
+            if (!pt || !pt.fuseFrom) return;
+            let sourceId = pt.fuseFrom.id;
+            let requiredQty = pt.fuseFrom.qty;
+            
+            if ((p.potInventory[sourceId] || 0) >= requiredQty) {
+                p.potInventory[sourceId] -= requiredQty;
+                p.potInventory[targetId] = (p.potInventory[targetId] || 0) + 1;
+                saveGame(); up();
+            }
+        }
+
         function startRoll() {
             if (p.isRolling || p.onCooldown) return;
             p.isRolling = true;
@@ -319,6 +337,22 @@
                 document.getElementById("a-chance").textContent = `1 in ${rolled.c.toLocaleString()}`;
             }
             
+            // Execute Auto-Brewing Cauldron Check
+            if (p.gear === "cauldron") {
+                p.cauldronProgress++;
+                if (p.cauldronProgress >= 50) {
+                    p.cauldronProgress = 0;
+                    let luckyPotRecipe = { Common: 3, Uncommon: 1 };
+                    if (Object.entries(luckyPotRecipe).every(([k, v]) => (p.inv[k] || 0) >= v)) {
+                        Object.entries(luckyPotRecipe).forEach(([k, v]) => p.inv[k] -= v);
+                        p.potInventory["luck_p"]++;
+                        let banner = document.getElementById("cauldron-alert");
+                        banner.textContent = "✨ Cauldron triggered! Automatically brewed 1x Lucky Potion.";
+                        setTimeout(() => { banner.textContent = ""; }, 3000);
+                    }
+                }
+            }
+            
             trackQuestProgress("aura", 1, rolled.c);
             styleAura(document.getElementById("a-name"), rolled.n);
             
@@ -345,7 +379,7 @@
         function checkAutoRoll() { if(document.getElementById("auto-roll-cb").checked && !p.isRolling && !p.onCooldown) startRoll(); }
         function has(req) { return Object.entries(req).every(([k, v]) => (p.inv[k] || 0) >= v); }
         function take(req) { Object.entries(req).forEach(([k, v]) => p.inv[k] -= v); }
-        function craft(id) { let g = CRAFTS.find(c => c.id === id); if (has(g.req)) { take(g.req); p.gear = id; saveGame(); up(); } }
+        function craft(id) { let g = CRAFTS.find(c => c.id === id); if (has(g.req)) { take(g.req); p.gear = id; p.cauldronProgress = 0; saveGame(); up(); } }
         function brew(id) { let pt = POTS.find(x => x.id === id); if (has(pt.req)) { take(pt.req); p.potInventory[id]++; saveGame(); up(); } }
 
         function usePotion(id) {
@@ -376,7 +410,6 @@
             document.getElementById("r-speed").textContent = stats.cd.toFixed(2);
             document.getElementById("r-gear").textContent = p.gear ? CRAFTS.find(c => c.id === p.gear).n : "None";
             
-            // Safety fallback if player crafted away their equipped aura count
             if (p.equippedAura !== "None" && (!p.inv[p.equippedAura] || p.inv[p.equippedAura] <= 0)) {
                 p.equippedAura = "None";
             }
@@ -402,7 +435,17 @@
             document.getElementById("pot").innerHTML = POTS.map(pt => {
                 let qty = p.potInventory[pt.id] || 0;
                 let req = Object.entries(pt.req).map(([k,v]) => `${k}:${p.inv[k] || 0}/${v}`).join(", ");
-                return `<div class="item"><div><b>${pt.n} (Owned: ${qty})</b><br><small>${pt.d}</small><br><small style="color:#aaa;">Requires: ${req}</small></div><div style="display:flex; gap:5px; align-items:center;"><button onclick="brew('${pt.id}')" ${!has(pt.req) ? 'disabled' : ''}>Brew</button><button onclick="usePotion('${pt.id}')" ${qty === 0 ? 'disabled' : ''} style="background:#00b4d8;">Use</button></div></div>`;
+                
+                // Construct fusion text if potion can be upgraded from previous tier
+                let fusionInterface = "";
+                if (pt.fuseFrom) {
+                    let srcName = POTS.find(x => x.id === pt.fuseFrom.id).n;
+                    let currentSrcCount = p.potInventory[pt.fuseFrom.id] || 0;
+                    let canFuse = currentSrcCount >= pt.fuseFrom.qty;
+                    fusionInterface = `<button onclick="combinePotion('${pt.id}')" ${!canFuse ? 'disabled' : ''} style="background:#ff9f1c; color:#111; margin-left:5px;">Fuse (${currentSrcCount}/${pt.fuseFrom.qty} ${srcName})</button>`;
+                }
+
+                return `<div class="item"><div><b>${pt.n} (Owned: ${qty})</b><br><small>${pt.d}</small><br><small style="color:#aaa;">Requires: ${req}</small></div><div style="display:flex; gap:5px; align-items:center;"><button onclick="brew('${pt.id}')" ${!has(pt.req) ? 'disabled' : ''}>Brew</button>${fusionInterface}<button onclick="usePotion('${pt.id}')" ${qty === 0 ? 'disabled' : ''} style="background:#00b4d8;">Use</button></div></div>`;
             }).join('');
 
             document.getElementById("quests").innerHTML = quests.map((q, idx) => {
