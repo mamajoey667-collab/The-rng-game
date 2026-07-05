@@ -424,10 +424,11 @@
             p.activeCharges.forEach(pot => s.luck += pot.b.luck);
             if (p.pityCount === 9) s.luck *= 2;
             
-            // ADMIN HOOK FOR LUCK MANIPULATION
+            // ADMIN HOOK SAFELY INTEGRATED
             if (adminLuckMultiplierActive) {
-                let boostVal = parseFloat(document.getElementById("adm-luck-boost").value) || 1;
-                s.luck *= boostVal;
+                let elem = document.getElementById("adm-luck-boost");
+                let boostVal = elem ? parseFloat(elem.value) : 1;
+                s.luck *= (boostVal || 1);
             }
 
             s.cd *= s.speedMod; return s;
@@ -562,8 +563,10 @@
 
         function setBiomeVisuals(biomeName) {
             let targetConf = BIOMES.find(b => b.n === biomeName);
-            document.body.style.background = targetConf.bg;
-            document.querySelectorAll('.panel').forEach(el => el.style.borderColor = targetConf.border);
+            if (targetConf) {
+                document.body.style.background = targetConf.bg;
+                document.querySelectorAll('.panel').forEach(el => el.style.borderColor = targetConf.border);
+            }
         }
 
         function evaluateBiomeRotation() {
@@ -593,7 +596,7 @@
             if (p.rolls >= 10000) { DOM.prestigeZone.innerHTML = `<button onclick="executePrestige()" style="background:#ffca28; color:#111;">✨ ASCEND PRESTIGE NOW</button>`; } else { DOM.prestigeZone.innerHTML = ""; }
             
             let activeB = BIOMES.find(b => b.n === currentBiomeStr);
-            DOM.biome.textContent = activeB.n; DOM.biomeBoost.textContent = activeB.desc;
+            if (activeB) { DOM.biome.textContent = activeB.n; DOM.biomeBoost.textContent = activeB.desc; }
             DOM.statTime.textContent = formatTime(p.totalSeconds); DOM.statPots.textContent = p.totalPotionsUsed;
             DOM.statLucky.textContent = p.luckiestName !== "None" ? `${p.luckiestName} (1 in ${p.luckiestChance.toLocaleString()})` : "None";
             
@@ -662,13 +665,13 @@
 
         function populateAdminDropdowns() {
             let auraSelect = document.getElementById("adm-aura-select");
-            auraSelect.innerHTML = AURAS.map(a => `<option value="${a.n}">${a.n} (1 in ${a.c})</option>`).join('');
+            if (auraSelect) auraSelect.innerHTML = AURAS.map(a => `<option value="${a.n}">${a.n} (1 in ${a.c})</option>`).join('');
 
             let potSelect = document.getElementById("adm-pot-select");
-            potSelect.innerHTML = POTS.map(pt => `<option value="${pt.id}">${pt.n}</option>`).join('');
+            if (potSelect) potSelect.innerHTML = POTS.map(pt => `<option value="${pt.id}">${pt.n}</option>`).join('');
 
             let biomeSelect = document.getElementById("adm-biome-select");
-            biomeSelect.innerHTML = BIOMES.map(b => `<option value="${b.n}">${b.n}</option>`).join('');
+            if (biomeSelect) biomeSelect.innerHTML = BIOMES.map(b => `<option value="${b.n}">${b.n}</option>`).join('');
         }
 
         function adminAddRolls() {
@@ -704,7 +707,6 @@
         }
 
         function adminForceBiome() {
-            // Clears baseline automatic rotation timers to prevent instant overriding
             clearInterval(biomeInterval);
             currentBiomeStr = document.getElementById("adm-biome-select").value;
             setBiomeVisuals(currentBiomeStr);
