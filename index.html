@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sol's RNG Overhaul - Solar & Chromatic Update</title>
+    <title>Sol's RNG Overhaul - Solar & Chromatic Update (Admin Edition)</title>
     <style>
         body { font-family: sans-serif; background: #121214; color: #e1e1e6; padding: 20px; text-align: center; transition: background 0.5s ease; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; margin: auto; text-align: left; }
@@ -36,6 +36,17 @@
         .leaderboard-row { display: flex; justify-content: space-between; padding: 6px; margin: 4px 0; border-radius: 4px; font-size: 0.85rem; background: #222227; }
         .player-row { border: 1px solid #6200ee; background: rgba(98, 0, 238, 0.15); font-weight: bold; }
         .identity-banner { font-size: 0.85rem; color: #aaa; margin-top: -10px; margin-bottom: 10px; }
+        
+        /* ADMIN PANEL STYLES */
+        .admin-toggle { background: #cf6679; color: #111; margin: 20px auto; display: block; font-size: 0.85rem; padding: 10px 20px; }
+        .admin-panel { background: #2b1a1a; border: 2px dashed #cf6679; max-width: 1000px; margin: 20px auto; padding: 20px; border-radius: 8px; text-align: left; display: none; }
+        .admin-title { color: #cf6679; font-weight: bold; font-size: 1.2rem; border-bottom: 1px solid #cf6679; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 1px;}
+        .admin-row { display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 15px; align-items: center; }
+        .admin-group { display: flex; flex-direction: column; gap: 4px; }
+        .admin-group label { font-size: 0.75rem; font-weight: bold; color: #ffb4b4; text-transform: uppercase; }
+        .admin-group select, .admin-group input { background: #1a1111; color: #fff; border: 1px solid #cf6679; padding: 6px; border-radius: 4px; font-size: 0.85rem; }
+        .admin-btn { background: #cf6679; color: #111; font-size: 0.8rem; padding: 7px 12px; }
+        .admin-btn:hover { background: #ff94a5; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
@@ -129,6 +140,63 @@
         </div>
     </div>
 
+    <!-- ADMIN PANEL TOGGLE BUTTON -->
+    <button class="admin-toggle" onclick="toggleAdminPanel()">🛠️ OPEN DEVELOPER PANEL</button>
+
+    <!-- ADMIN CONTROL PANEL CONTAINER -->
+    <div class="admin-panel" id="adm-panel">
+        <div class="admin-title">Developer Options / Admin Commands</div>
+        
+        <div class="admin-row">
+            <div class="admin-group">
+                <label>Roll Adjustment</label>
+                <input type="number" id="adm-roll-amt" value="5000" style="width: 100px;">
+            </div>
+            <button class="admin-btn" onclick="adminAddRolls()">Give Rolls</button>
+            <button class="admin-btn" onclick="adminClearRolls()" style="background:#aaa;">Set Rolls to 0</button>
+        </div>
+
+        <div class="admin-row">
+            <div class="admin-group">
+                <label>Spawn Aura Instantly</label>
+                <select id="adm-aura-select"></select>
+            </div>
+            <div class="admin-group">
+                <label>Qty</label>
+                <input type="number" id="adm-aura-qty" value="1" style="width: 50px;">
+            </div>
+            <button class="admin-btn" onclick="adminAddAura()">Grant Aura</button>
+        </div>
+
+        <div class="admin-row">
+            <div class="admin-group">
+                <label>Grant Potions</label>
+                <select id="adm-pot-select"></select>
+            </div>
+            <div class="admin-group">
+                <label>Qty</label>
+                <input type="number" id="adm-pot-qty" value="5" style="width: 50px;">
+            </div>
+            <button class="admin-btn" onclick="adminAddPotions()">Grant Potions</button>
+        </div>
+
+        <div class="admin-row">
+            <div class="admin-group">
+                <label>Force Environment Biome</label>
+                <select id="adm-biome-select"></select>
+            </div>
+            <button class="admin-btn" onclick="adminForceBiome()">Change Biome</button>
+        </div>
+
+        <div class="admin-row">
+            <div class="admin-group">
+                <label>Custom Dev Multiplier</label>
+                <input type="number" id="adm-luck-boost" value="10" step="0.5" style="width: 80px;">
+            </div>
+            <button class="admin-btn" onclick="adminToggleLuckMultiplier()" id="adm-luck-btn">Activate Custom Luck</button>
+        </div>
+    </div>
+
     <div class="panel" style="max-width: 1000px; margin: 20px auto 0 auto;">
         <h4 style="margin: 0 0 5px 0; color: #6200ee;">📋 Historical Master Patch Logs</h4>
         <div class="log-box" id="patch-logs"></div>
@@ -178,7 +246,6 @@
             { n: "Eclipse", c: 50000, col: "linear-gradient(90deg, #111, #ff4a4a, #111)", biome: "Eclipse" }
         ];
 
-        // Blueprints marked with slot classifications
         const CRAFTS = [
             { id: "glove", n: "Luck Glove", d: "+50% Luck", slot: "glove", b: {luck: 0.5, speed: 0}, req: { Common: 5, Uncommon: 3 } },
             { id: "cauldron", n: "Alchemist Cauldron", d: "Passive Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose loose auras.", slot: "utility", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } },
@@ -224,6 +291,7 @@
 
         let currentBiomeStr = "Normal";
         let localGlobalPlayers = [];
+        let adminLuckMultiplierActive = false;
 
         const DOM = {
             count: document.getElementById("r-count"), luck: document.getElementById("r-luck"), speed: document.getElementById("r-speed"),
@@ -249,6 +317,7 @@
             }
             DOM.nameTag.textContent = p.nickname;
             setupFirebaseSync();
+            populateAdminDropdowns();
         }
 
         function setupFirebaseSync() {
@@ -345,17 +414,22 @@
         function getStats() {
             let s = { luck: 1.0 + (p.prestige * 0.25), speedMod: 1.0, cd: 1.5 };
             
-            // Glove Bonus Evaluation
             let foundGlove = CRAFTS.find(c => c.id === p.gear);
             if (foundGlove) { s.luck += foundGlove.b.luck; if(foundGlove.b.speed) s.speedMod *= (1 - foundGlove.b.speed); }
             
-            // Utility Bonus Evaluation
             let foundUtil = CRAFTS.find(c => c.id === p.utility);
             if (foundUtil) { s.luck += foundUtil.b.luck; if(foundUtil.b.speed) s.speedMod *= (1 - foundUtil.b.speed); }
 
             p.activePots.forEach(pot => { s.luck += pot.b.luck; if(pot.b.speed) s.speedMod *= pot.b.speed; });
             p.activeCharges.forEach(pot => s.luck += pot.b.luck);
             if (p.pityCount === 9) s.luck *= 2;
+            
+            // ADMIN HOOK FOR LUCK MANIPULATION
+            if (adminLuckMultiplierActive) {
+                let boostVal = parseFloat(document.getElementById("adm-luck-boost").value) || 1;
+                s.luck *= boostVal;
+            }
+
             s.cd *= s.speedMod; return s;
         }
 
@@ -414,7 +488,6 @@
         function formatTime(secs) { let m = Math.floor(secs / 60), s = secs % 60; return m > 0 ? `${m}m ${s}s` : `${s}s`; }
         function toggleEquip(name) { p.equippedAura = (p.equippedAura === name) ? "None" : (p.inv[name] > 0 ? name : "None"); saveGame(); up(); }
         
-        // Dynamic Single or Multi-slot Equipment Toggle Engine
         function toggleGear(id) { 
             let blueprint = CRAFTS.find(x => x.id === id);
             if (!blueprint || !p.craftedGears.includes(id)) return;
@@ -455,7 +528,6 @@
             else { p.inv[rolled.n]++; DOM.chance.textContent = `1 in ${rolled.c.toLocaleString()}`; }
             if (rolled.c > p.luckiestChance) { p.luckiestChance = rolled.c; p.luckiestName = rolled.n; }
             
-            // Checks passive utility assignment for brewing triggers
             if (p.utility === "cauldron" && ++p.cauldronProgress >= 50) {
                 p.cauldronProgress = 0;
                 if (p.inv.Common >= 3 && p.inv.Uncommon >= 1) {
@@ -488,18 +560,22 @@
             }
         }
 
+        function setBiomeVisuals(biomeName) {
+            let targetConf = BIOMES.find(b => b.n === biomeName);
+            document.body.style.background = targetConf.bg;
+            document.querySelectorAll('.panel').forEach(el => el.style.borderColor = targetConf.border);
+        }
+
         function evaluateBiomeRotation() {
             let roll = Math.random();
             if (roll < (1 / 50)) { currentBiomeStr = "Eclipse"; } 
             else if (roll < (1 / 20)) { currentBiomeStr = "Nightfall"; } 
             else if (roll < (1 / 5)) { currentBiomeStr = "Rainy"; } 
             else { currentBiomeStr = "Normal"; }
-            let targetConf = BIOMES.find(b => b.n === currentBiomeStr);
-            document.body.style.background = targetConf.bg;
-            document.querySelectorAll('.panel').forEach(el => el.style.borderColor = targetConf.border);
+            setBiomeVisuals(currentBiomeStr);
             up();
         }
-        setInterval(evaluateBiomeRotation, 300000);
+        let biomeInterval = setInterval(evaluateBiomeRotation, 300000);
 
         setInterval(() => { 
             p.totalSeconds++;
@@ -541,7 +617,6 @@
             let visiblePots = POTS.filter(pt => (p.potInventory[pt.id] || 0) > 0);
             DOM.invPots.innerHTML = visiblePots.length ? visiblePots.map(pt => `<div class="item"><div><b>${pt.n}</b><br><small style="color:#aaa;">${pt.d}</small></div><div style="display:flex; gap:10px; align-items:center;"><b>x${p.potInventory[pt.id]}</b><button onclick="usePotion('${pt.id}')" style="background:#00b4d8; padding:4px 8px; font-size:0.75rem;">Use</button></div></div>`).join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No potions inside vault.</div>';
             
-            // Handles rendering across multiple inventory equipment classifications seamlessly
             let inventoryEquipment = [];
             if (p.craftedGears.length) {
                 inventoryEquipment = p.craftedGears.map(gId => {
@@ -577,6 +652,77 @@
             document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.t-btn').forEach(el => el.classList.remove('active'));
             document.getElementById(target.dataset.tab).style.display = 'block'; target.classList.add('active');
+        }
+
+        /* ADMIN PANEL INTERACTIVE CORE LOGIC */
+        function toggleAdminPanel() {
+            let pnl = document.getElementById("adm-panel");
+            pnl.style.display = (pnl.style.display === "block") ? "none" : "block";
+        }
+
+        function populateAdminDropdowns() {
+            let auraSelect = document.getElementById("adm-aura-select");
+            auraSelect.innerHTML = AURAS.map(a => `<option value="${a.n}">${a.n} (1 in ${a.c})</option>`).join('');
+
+            let potSelect = document.getElementById("adm-pot-select");
+            potSelect.innerHTML = POTS.map(pt => `<option value="${pt.id}">${pt.n}</option>`).join('');
+
+            let biomeSelect = document.getElementById("adm-biome-select");
+            biomeSelect.innerHTML = BIOMES.map(b => `<option value="${b.n}">${b.n}</option>`).join('');
+        }
+
+        function adminAddRolls() {
+            let val = parseInt(document.getElementById("adm-roll-amt").value) || 0;
+            p.rolls += val;
+            trackQuestProgress("roll", val);
+            syncDatabaseProfile(); saveGame(); up();
+        }
+
+        function adminClearRolls() {
+            p.rolls = 0;
+            p.pityCount = 0;
+            syncDatabaseProfile(); saveGame(); up();
+        }
+
+        function adminAddAura() {
+            let auraName = document.getElementById("adm-aura-select").value;
+            let qty = parseInt(document.getElementById("adm-aura-qty").value) || 1;
+            p.inv[auraName] += qty;
+            let targetAura = AURAS.find(a => a.n === auraName);
+            if (targetAura && targetAura.c > p.luckiestChance) {
+                p.luckiestChance = targetAura.c; p.luckiestName = targetAura.n;
+            }
+            trackQuestProgress("aura", qty, targetAura ? targetAura.c : 0);
+            saveGame(); up();
+        }
+
+        function adminAddPotions() {
+            let potId = document.getElementById("adm-pot-select").value;
+            let qty = parseInt(document.getElementById("adm-pot-qty").value) || 1;
+            p.potInventory[potId] = (p.potInventory[potId] || 0) + qty;
+            saveGame(); up();
+        }
+
+        function adminForceBiome() {
+            // Clears baseline automatic rotation timers to prevent instant overriding
+            clearInterval(biomeInterval);
+            currentBiomeStr = document.getElementById("adm-biome-select").value;
+            setBiomeVisuals(currentBiomeStr);
+            biomeInterval = setInterval(evaluateBiomeRotation, 300000);
+            up();
+        }
+
+        function adminToggleLuckMultiplier() {
+            adminLuckMultiplierActive = !adminLuckMultiplierActive;
+            let btn = document.getElementById("adm-luck-btn");
+            if (adminLuckMultiplierActive) {
+                btn.textContent = "Deactivate Multiplier";
+                btn.style.background = "#00ffcc";
+            } else {
+                btn.textContent = "Activate Custom Luck";
+                btn.style.background = "#cf6679";
+            }
+            up();
         }
 
         document.getElementById("patch-logs").textContent = PATCH_NOTES.join("\n\n");
