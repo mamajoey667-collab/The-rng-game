@@ -2,138 +2,264 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sol's RNG Overhaul - Solar & Chromatic Update</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sols RNG - Definitive Multiplayer Edition</title>
+    <!-- Firebase App and Database SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
-        body { font-family: sans-serif; background: #121214; color: #e1e1e6; padding: 20px; text-align: center; transition: background 0.5s ease; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 1000px; margin: auto; text-align: left; }
-        .panel { background: #1a1a1e; padding: 15px; border-radius: 8px; border: 1px solid #2e2e35; position: relative; }
-        button { background: #6200ee; color: #fff; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;}
-        button:disabled { background: #444; cursor: not-allowed; }
-        .item { background: #252529; padding: 8px; margin: 5px 0; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; font-size: 0.85rem; }
-        .tabs button { background: none; color: #aaa; margin-right: 10px; padding: 5px; cursor: pointer; border: none; font-size: 0.9rem;}
-        .tabs button.active { color: #fff; border-bottom: 2px solid #6200ee; }
-        .tab-content { display: none; max-height: 460px; overflow-y: auto; margin-top: 10px; }
-        .cd-bar { width: 100%; background: #333; height: 4px; margin-top: 10px; border-radius: 2px; overflow: hidden; }
-        .cd-fill { height: 100%; background: #6200ee; width: 0%; transition: width linear; }
-        .auto-box { margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 12px; font-weight: bold; }
-        .auto-box label { display: flex; align-items: center; gap: 4px; cursor: pointer; font-size: 0.9rem; }
-        .auto-box input { width: 16px; height: 16px; cursor: pointer; }
-        .reward-alert { color: #ffca28; font-weight: bold; font-size: 0.9rem; margin-bottom: 5px; min-height: 20px; text-align: center;}
-        .pity-alert { color: #00ffcc; font-weight: bold; font-size: 0.85rem; margin-bottom: 10px; }
-        .log-box { text-align: left; background: #111; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 0.8rem; border-left: 3px solid #6200ee; margin-top: 10px; max-height: 180px; overflow-y: auto; white-space: pre-line; line-height: 1.4; }
-        .status-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        .status-label { font-size: 0.8rem; font-weight: bold; color: #aaa; }
-        .backup-badge { background: #ff9f1c; color: #111; font-size: 0.65rem; padding: 3px 8px; border-radius: 10px; font-weight: bold; letter-spacing: 0.5px; }
-        .save-tools { border-top: 1px solid #333; padding-top: 10px; margin-top: 15px; display: flex; gap: 8px; flex-direction: column; }
-        .filter-panel { background: #222227; padding: 10px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #333; font-size: 0.8rem; }
-        .filter-title { font-weight: bold; color: #ff4a4a; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;}
-        .filter-options { display: flex; gap: 10px; flex-wrap: wrap; }
-        .inv-section-title { font-size: 0.8rem; font-weight: bold; color: #6200ee; letter-spacing: 1px; margin: 15px 0 5px 0; border-bottom: 1px dashed #333; padding-bottom: 3px; text-transform: uppercase;}
-        .biome-banner { background: rgba(0,0,0,0.4); padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #444; font-size: 0.9rem; font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-        .title-badge { color: #ffca28; font-weight: bold; margin-right: 5px; font-family: monospace; }
-        .stats-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin-top: 10px; }
-        .stats-table td { padding: 6px 4px; border-bottom: 1px solid #2e2e35; }
-        .leaderboard-row { display: flex; justify-content: space-between; padding: 6px; margin: 4px 0; border-radius: 4px; font-size: 0.85rem; background: #222227; }
-        .player-row { border: 1px solid #6200ee; background: rgba(98, 0, 238, 0.15); font-weight: bold; }
-        .identity-banner { font-size: 0.85rem; color: #aaa; margin-top: -10px; margin-bottom: 10px; }
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background: #121214; color: #e2e8f0; display: flex; flex-direction: column; min-height: 100vh; overflow-x: hidden; transition: background 0.5s ease; }
+        header { background: rgba(20, 20, 25, 0.8); backdrop-filter: blur(8px); border-bottom: 2px solid #2e2e35; padding: 15px 25px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .logo-zone h1 { font-size: 1.5rem; letter-spacing: 2px; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.2); }
+        .logo-zone span { color: #ffca28; font-weight: bold; font-family: monospace; }
+        .identity-badge { display: flex; align-items: center; gap: 15px; }
+        .sync-indicator { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; background: #ff9f1c; color: #111; letter-spacing: 1px; }
+        
+        .main-container { max-width: 1400px; width: 100%; margin: 25px auto; padding: 0 20px; flex: 1; }
+        .grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 25px; }
+        @media(max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        
+        .panel { background: #18181c; border: 2px solid #2e2e35; border-radius: 12px; padding: 25px; position: relative; display: flex; flex-direction: column; transition: border-color 0.5s ease; }
+        
+        /* Stats Dashboard Styling */
+        .dashboard { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: #222227; border-radius: 8px; padding: 12px; text-align: center; border-bottom: 3px solid #3b3b45; }
+        .stat-card small { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-card div { font-size: 1.4rem; font-weight: bold; margin-top: 4px; color: #fff; }
+        
+        /* RNG Display Center */
+        .roll-center { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; margin: 30px 0; min-height: 220px; text-align: center; background: rgba(0,0,0,0.2); border-radius: 10px; padding: 20px; border: 1px dashed #333; }
+        .aura-display-name { font-size: 2.8rem; font-weight: 900; letter-spacing: 1px; min-height: 4rem; line-height: 1.2; text-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        .aura-chance-tag { font-size: 1.1rem; color: #94a3b8; font-weight: 500; margin-top: 10px; font-family: monospace; }
+        
+        /* Controls & Progress Bars */
+        .btn-wrapper { width: 100%; position: relative; margin-top: 15px; }
+        .roll-trigger { width: 100%; padding: 18px; border: none; border-radius: 8px; font-size: 1.3rem; font-weight: bold; cursor: pointer; color: #111; background: #00ffcc; box-shadow: 0 4px 15px rgba(0, 255, 204, 0.3); transition: all 0.2s ease; position: relative; overflow: hidden; }
+        .roll-trigger:disabled { background: #2a2a30 !important; color: #666 !important; cursor: not-allowed; box-shadow: none; }
+        .cooldown-fill { position: absolute; top: 0; left: 0; height: 100%; width: 0%; background: rgba(255,255,255,0.15); pointer-events: none; }
+        
+        .auto-roll-module { display: flex; align-items: center; justify-content: space-between; background: #222227; padding: 12px 20px; border-radius: 8px; margin-top: 15px; border: 1px solid #2e2e35; }
+        .checkbox-container { display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 600; }
+        .checkbox-container input { width: 18px; height: 18px; cursor: pointer; accent-color: #00ffcc; }
+        
+        .banner-feed { margin-top: 15px; background: #1e1e24; padding: 10px; border-radius: 6px; text-align: center; font-size: 0.85rem; color: #ffae19; font-weight: 500; border-left: 4px solid #ffae19; }
+        
+        /* Tabs Right Panel Config */
+        .tabs { display: flex; gap: 8px; border-bottom: 2px solid #2e2e35; padding-bottom: 12px; margin-bottom: 20px; overflow-x: auto; }
+        .t-btn { background: #222227; border: 1px solid #2e2e35; padding: 10px 16px; border-radius: 6px; cursor: pointer; color: #94a3b8; font-weight: 600; font-size: 0.9rem; transition: all 0.2s; white-space: nowrap; }
+        .t-btn:hover { background: #2b2b33; color: #fff; }
+        .t-btn.active { background: #00b4d8; color: #111; border-color: #00b4d8; }
+        
+        .tab-content { display: none; height: 580px; overflow-y: auto; padding-right: 5px; }
+        .tab-content::-webkit-scrollbar { width: 6px; }
+        .tab-content::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        
+        /* Global List Components */
+        .item { background: #1e1e24; border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; border: 1px solid #2e2e35; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .item b { font-size: 0.95rem; color: #fff; }
+        .item small { color: #94a3b8; font-size: 0.8rem; display: block; margin-top: 2px; }
+        .item button { background: #00b4d8; border: none; padding: 6px 12px; font-weight: bold; border-radius: 4px; cursor: pointer; color: #111; font-size: 0.85rem; }
+        .item button:disabled { background: #333 !important; color: #666 !important; cursor: not-allowed; }
+        
+        .inv-section-title { font-size: 0.85rem; font-weight: bold; text-transform: uppercase; color: #ffca28; letter-spacing: 1px; margin: 15px 0 8px 0; border-bottom: 1px solid #2e2e35; padding-bottom: 4px; }
+        
+        /* Leaderboard UI */
+        .leaderboard-row { display: flex; justify-content: space-between; padding: 10px 12px; background: #1e1e24; margin-bottom: 6px; border-radius: 6px; border-left: 4px solid #444; font-size: 0.9rem; }
+        .leaderboard-row.player-row { background: rgba(0, 255, 204, 0.08); border-left-color: #00ffcc; font-weight: bold; }
+        
+        /* Biome Banner Display */
+        .biome-banner { display: flex; align-items: center; justify-content: space-between; background: #1a1a22; border: 1px solid #2e2e35; border-radius: 8px; padding: 15px 20px; margin-bottom: 25px; gap: 15px; }
+        .biome-info h4 { font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .biome-info div { font-size: 1.3rem; font-weight: 800; margin-top: 2px; color: #fff; }
+        .biome-desc { font-size: 0.85rem; color: #a5b4fc; max-width: 60%; text-align: right; line-height: 1.4; }
+        
+        /* Utility Config Options */
+        .system-controls { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; background: #16161a; padding: 15px; border-radius: 8px; border: 1px dashed #2e2e35; }
+        .sys-btn { flex: 1; min-width: 120px; background: #2a2a35; border: none; padding: 10px; color: #fff; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; text-align: center; }
+        .sys-btn.danger { background: #6b21a8; color: #fff; }
+        
+        /* Filter Interface */
+        .filter-panel { background: #222227; padding: 12px 16px; border-radius: 8px; border: 1px solid #2e2e35; margin-bottom: 20px; }
+        .filter-grid { display: flex; gap: 15px; margin-top: 8px; }
+        .filter-label { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: #cbd5e1; }
+        .filter-label input { accent-color: #ef4444; }
     </style>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 </head>
 <body>
 
-    <div class="biome-banner" id="biome-container">
-        <div>🌍 Current Environment Biome: <span id="env-biome" style="color: #fff;">Normal</span></div>
-        <div id="env-biome-boost" style="color: #aaa; font-weight: normal; font-size: 0.8rem;">No active baseline drop modifications</div>
-    </div>
-
-    <h2><span id="player-title" class="title-badge"></span>Sol's RNG Overhaul</h2>
-    <div class="identity-banner">Playing as: <span id="display-nickname" style="color: #00ffcc; font-weight: bold;">Connecting...</span></div>
-    <p>Rolls: <span id="r-count">0</span> | Luck: <span id="r-luck">1.0</span>x | CD: <span id="r-speed">1.5</span>s | Prestige: <span id="r-prestige" style="color:#ffca28;">0</span></p>
-    <p style="font-size: 0.85rem; margin-top: -10px; color: #bbb;">Glove: <span id="r-gear" style="color:#fff; font-weight:bold;">None</span> | Passive Utility: <span id="r-utility" style="color:#ff9f1c; font-weight:bold;">None</span></p>
-    <p style="font-size: 0.9rem; margin-top: -5px; color: #aaa;">Equipped Aura: <span id="r-equipped" style="font-weight: bold;">None</span></p>
-
-    <div class="grid">
-        <div class="panel" style="text-align: center; display: flex; flex-direction: column; justify-content: center; min-height: 360px;">
-            <div class="status-panel">
-                <span class="status-label">GLOBAL DATABANK SYNC</span>
-                <span class="backup-badge" id="sync-badge">INITIALIZING</span>
+    <header>
+        <div class="logo-zone">
+            <h1>SOLS RNG <span>MULTIPLAYER v7.5</span></h1>
+        </div>
+        <div class="identity-badge">
+            <span id="sync-badge" class="sync-indicator">CONNECTING...</span>
+            <div style="font-weight: 600; font-size: 0.95rem; color: #fff;">
+                <span id="player-title" style="color:#ffca28; font-family:monospace;"></span><span id="display-nickname">...</span>
             </div>
-            <div id="reward-banner" class="reward-alert">Next milestone at 100 rolls</div>
-            <div id="pity-banner" class="pity-alert">Rolls until 2x Luck: 10</div>
-            <div id="a-name" style="font-size: 2rem; font-weight: bold; margin: 5px 0; min-height: 40px;">Ready</div>
-            <div id="a-chance" style="color: #aaa; margin-bottom: 15px; min-height: 20px;"></div>
-            
-            <button id="roll-btn" onclick="startRoll()" style="font-size: 1.2rem; padding: 12px;">ROLL</button>
-            
-            <div class="auto-box">
-                <label><input type="checkbox" id="auto-roll-cb" onchange="checkAutoRoll()"> Auto Roll</label>
+        </div>
+    </header>
+
+    <div class="main-container">
+        
+        <!-- Environmental Biome System Dashboard -->
+        <div class="biome-banner">
+            <div class="biome-info">
+                <h4>Microclimatic Biome Alignment</h4>
+                <div id="env-biome">Normal</div>
             </div>
-            
-            <div class="cd-bar"><div id="cd-fill" class="cd-fill"></div></div>
-            <div id="p-timer" style="color: #00ffcc; margin-top: 10px; font-size: 0.85rem; white-space: pre-line;"></div>
-            <div id="cauldron-alert" style="color: #ff9f1c; font-size: 0.75rem; font-weight: bold; margin-top: 5px;"></div>
-            
-            <div style="margin-top: 15px;" id="prestige-zone"></div>
-            <button onclick="resetGame()" style="background:#c94c4c; margin-top:20px; font-size:0.75rem; padding:4px 8px; opacity:0.4; border-radius: 4px;">Hard Reset Data</button>
+            <div id="env-biome-boost" class="biome-desc">Evaluating parameters...</div>
         </div>
 
-        <div class="panel">
-            <div class="tabs" onclick="handleTabClick(event)">
-                <button data-tab="inv" class="t-btn active">Inventory</button>
-                <button data-tab="craft" class="t-btn">Blueprints</button>
-                <button data-tab="pot" class="t-btn">Alchemy Hub</button>
-                <button data-tab="quests" class="t-btn" style="color: #ffca28;">Quests</button>
-                <button data-tab="stats-panel" class="t-btn" style="color: #00ffcc;">Rankings</button>
-            </div>
+        <div class="grid">
             
-            <div id="inv" class="tab-content" style="display: block;">
-                <div class="filter-panel">
-                    <div class="filter-title">🚫 Auto-Delete Filter (Trash Low Pulls)</div>
-                    <div class="filter-options">
-                        <label><input type="checkbox" id="f-common" onchange="saveFilters()"> Common</label>
-                        <label><input type="checkbox" id="f-uncommon" onchange="saveFilters()"> Uncommon</label>
-                        <label><input type="checkbox" id="f-rare" onchange="saveFilters()"> Rare</label>
+            <!-- Left Side: Simulation Interaction Panel -->
+            <div class="panel">
+                <div class="dashboard">
+                    <div class="stat-card">
+                        <small>Total Rolls Executed</small>
+                        <div id="r-count">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <small>Luck Dynamic Multiplier</small>
+                        <div style="color: #00ffcc;"><span id="r-luck">1.0</span>x</div>
+                    </div>
+                    <div class="stat-card">
+                        <small>Roll Speed Cooldown</small>
+                        <div style="color: #4cc9f0;"><span id="r-speed">1.50</span>s</div>
                     </div>
                 </div>
-                
-                <div class="inv-section-title">✨ Auras Owned</div>
-                <div id="inv-auras-list"></div>
 
-                <div class="inv-section-title">🧪 Potions Held</div>
-                <div id="inv-potions-list"></div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.8rem; margin-bottom: 20px; background:#1e1e24; padding:12px; border-radius:8px;">
+                    <div>🧤 Equipped Glove: <span id="r-gear" style="color:#ffca28; font-weight:bold;">None</span></div>
+                    <div>🧪 Passive Utility: <span id="r-utility" style="color:#a5b4fc; font-weight:bold;">None</span></div>
+                    <div style="grid-column: span 2; border-top:1px solid #333; margin-top:6px; padding-top:6px;">🌟 Active Profile Aura: <span id="r-equipped" style="font-weight:bold;">None</span></div>
+                </div>
 
-                <div class="inv-section-title">🛠️ Gears Crafted</div>
-                <div id="inv-gears-list"></div>
-                
-                <div class="save-tools">
-                    <button onclick="generateSaveCode()" style="background:#4361ee;">💾 Export Save Code</button>
-                    <button onclick="loadSaveCode()" style="background:#ff9f1c; color: #111;">📂 Import Save Code</button>
+                <div class="roll-center">
+                    <div id="a-name" class="aura-display-name">Click Roll to Begin</div>
+                    <div id="a-chance" class="aura-chance-tag">Ready for execution</div>
+                    <div id="cauldron-alert" style="color:#00ffcc; font-size:0.8rem; font-weight:500; margin-top:10px; min-height:1.2rem;"></div>
+                </div>
+
+                <!-- Roll Control Mechanisms -->
+                <div class="btn-wrapper">
+                    <button id="roll-btn" class="roll-trigger" onclick="startRoll()">
+                        <div id="cd-fill" class="cooldown-fill"></div>
+                        EXECUTE ISOLATED ROLL
+                    </button>
+                </div>
+
+                <div class="auto-roll-module">
+                    <label class="checkbox-container">
+                        <input type="checkbox" id="auto-roll-cb" onchange="checkAutoRoll()">
+                        Engage Autonomous Infinite Auto-Roll Loop
+                    </label>
+                </div>
+
+                <div id="pity-banner" class="banner-feed">Rolls until 2x Luck: 10</div>
+                <div id="reward-banner" class="banner-feed" style="background:#1a2332; border-left-color:#00b4d8; color:#00b4d8; margin-top:8px;">Calculating milestones...</div>
+
+                <div style="margin-top:20px;">
+                    <div style="font-size:0.8rem; font-weight:bold; color:#aaa; margin-bottom:5px; text-transform:uppercase;">Active Consumption Timers</div>
+                    <div id="p-timer" style="font-size:0.8rem; color:#fff; line-height:1.5; font-family:monospace; background:#222227; padding:10px; border-radius:6px; min-height:40px;">No potions currently active.</div>
                 </div>
             </div>
-            <div id="craft" class="tab-content"></div>
-            <div id="pot" class="tab-content"></div>
-            <div id="quests" class="tab-content"></div>
-            
-            <div id="stats-panel" class="tab-content">
-                <div class="inv-section-title">🏆 Live Global Player Leaderboard</div>
-                <div id="leaderboard-container"><div style="color:#aaa; font-size:0.85rem; padding:10px;">Connecting to databank network...</div></div>
-                
-                <div class="inv-section-title">📊 Lifetime Detailed Metrics</div>
-                <table class="stats-table">
-                    <tr><td>Total Time Active:</td><td id="stat-time" style="text-align:right; font-weight:bold;">0s</td></tr>
-                    <tr><td>Luckiest Roll Ever:</td><td id="stat-lucky" style="text-align:right; font-weight:bold; color:#ffca28;">None</td></tr>
-                    <tr><td>Total Potions Consumed:</td><td id="stat-pots" style="text-align:right; font-weight:bold;">0</td></tr>
-                </table>
+
+            <!-- Right Side: Progression Vault Tabs -->
+            <div class="panel" onclick="handleTabClick(event)">
+                <div class="tabs">
+                    <button class="t-btn active" data-tab="vault-panel">🎒 Storage Vault</button>
+                    <button class="t-btn" data-tab="craft-panel">⚒️ Alchemist Forging</button>
+                    <button class="t-btn" data-tab="quests-panel">🎯 Progression Matrix</button>
+                    <button class="t-btn" data-tab="rank-panel">🏆 Global Registry</button>
+                    <button class="t-btn" data-tab="logs-panel">📋 Manifest Logs</button>
+                </div>
+
+                <!-- Tab 1: Storage Vault -->
+                <div id="vault-panel" class="tab-content" style="display: block;">
+                    <div class="filter-panel">
+                        <div style="font-size:0.8rem; font-weight:bold; color:#bbb;">Auto-Trash Filter Matrix</div>
+                        <div class="filter-grid">
+                            <label class="filter-label"><input type="checkbox" id="f-common" onchange="saveFilters()"> Common</label>
+                            <label class="filter-label"><input type="checkbox" id="f-uncommon" onchange="saveFilters()"> Uncommon</label>
+                            <label class="filter-label"><input type="checkbox" id="f-rare" onchange="saveFilters()"> Rare</label>
+                        </div>
+                    </div>
+                    <div class="inv-section-title">Manifested Visual Auras</div>
+                    <div id="inv-auras-list"></div>
+                    <div class="inv-section-title">Brewed Chemical Solutions</div>
+                    <div id="inv-potions-list"></div>
+                    <div class="inv-section-title">Forged Mechanical Artifacts</div>
+                    <div id="inv-gears-list"></div>
+                </div>
+
+                <!-- Tab 2: Alchemist Forging -->
+                <div id="craft-panel" class="tab-content">
+                    <div class="inv-section-title">Structural Infrastructure Blueprint Engineering</div>
+                    <div id="craft"></div>
+                    <div class="inv-section-title">Chemical Solution Transmutation Laboratories</div>
+                    <div id="pot"></div>
+                </div>
+
+                <!-- Tab 3: Progression Matrix -->
+                <div id="quests-panel" class="tab-content">
+                    <div class="inv-section-title">High-Priority Operations</div>
+                    <div id="quests"></div>
+                    
+                    <div class="inv-section-title">Structural Prestige Evolution Protocol</div>
+                    <div style="background:#1e1e24; border-radius:8px; padding:15px; border:1px solid #2e2e35;">
+                        <p style="font-size:0.85rem; color:#aaa; line-height:1.4; margin-bottom:12px;">
+                            Reaching <b style="color:#fff;">10,000 baseline rolls</b> permits administrative structural resets. Doing so will completely wipe your existing aura reserves and counter arrays back to 0 in exchange for adding <b style="color:#ffca28;">+1 permanent macro-prestige tier</b>. Each prestige tier awards a flat permanent <b style="color:#00ffcc;">+25% baseline luck amplification factor</b>.
+                        </p>
+                        <div style="display:flex; justify-content:space-between; align-items:center; background:#111; padding:10px; border-radius:6px; margin-bottom:12px;">
+                            <span style="font-size:0.85rem; color:#94a3b8;">Active Prestige Level:</span>
+                            <b id="r-prestige" style="color:#ffca28; font-size:1.2rem;">0</b>
+                        </div>
+                        <div id="prestige-zone"></div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Global Registry -->
+                <div id="rank-panel" class="tab-content">
+                    <div class="inv-section-title">Realtime Databank Synchronization Node Leaderboards</div>
+                    <div id="leaderboard-container"></div>
+                </div>
+
+                <!-- Tab 5: Manifest Logs -->
+                <div id="logs-panel" class="tab-content">
+                    <div class="inv-section-title">Static Historical Session Analysis</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:20px;">
+                        <div style="background:#222227; padding:12px; border-radius:6px; text-align:center;">
+                            <small style="font-size:0.7rem; color:#aaa; text-transform:uppercase;">Historical Context Lifetime Time</small>
+                            <div id="stat-time" style="font-size:1.1rem; font-weight:bold; margin-top:3px;">0s</div>
+                        </div>
+                        <div style="background:#222227; padding:12px; border-radius:6px; text-align:center;">
+                            <small style="font-size:0.7rem; color:#aaa; text-transform:uppercase;">Solutions Consumed Counter</small>
+                            <div id="stat-pots" style="font-size:1.1rem; font-weight:bold; margin-top:3px;">0</div>
+                        </div>
+                        <div style="background:#222227; padding:12px; border-radius:6px; text-align:center; grid-column:span 2;">
+                            <small style="font-size:0.7rem; color:#aaa; text-transform:uppercase;">Peak Rarity Probability Extraction</small>
+                            <div id="stat-lucky" style="font-size:1rem; font-weight:bold; margin-top:3px; color:#ffca28;">None</div>
+                        </div>
+                    </div>
+
+                    <div class="inv-section-title">Active Patch Manifest Arrays</div>
+                    <pre id="patch-logs" style="font-family:monospace; background:#111; border-radius:6px; padding:12px; font-size:0.75rem; color:#cbd5e1; white-space:pre-wrap; line-height:1.5;"></pre>
+                    
+                    <div class="inv-section-title">System Utility Administration Engine Overrides</div>
+                    <div class="system-controls">
+                        <button class="sys-btn" onclick="generateSaveCode()">📥 EXPORT BINARY RECOVERY MATRIX</button>
+                        <button class="sys-btn" onclick="loadSaveCode()">📤 INJECT EXTERNAL BACKUP NODE</button>
+                        <button class="sys-btn danger" onclick="resetGame()">☣️ WIPE ENTIRE LOCAL PROFILE DATABASE</button>
+                    </div>
+                </div>
             </div>
+
         </div>
     </div>
 
-    <div class="panel" style="max-width: 1000px; margin: 20px auto 0 auto;">
-        <h4 style="margin: 0 0 5px 0; color: #6200ee;">📋 Historical Master Patch Logs</h4>
-        <div class="log-box" id="patch-logs"></div>
-    </div>
-
+    <!-- Core Isolated Logic Engines -->
     <script>
         const firebaseConfig = {
             apiKey: "YOUR_API_KEY",
@@ -145,7 +271,21 @@
             appId: "YOUR_APP_ID"
         };
 
+        // 🚨 PASTE YOUR PERSONAL UNIQUE ID HERE
+        const ADMIN_PASSWORD = "mysecretadminpass"; 
+// ...
+if (p.nickname === ADMIN_PASSWORD) { ... }
+
+
         let db = null;
+        // Force Admin Check on Nickname
+setInterval(() => {
+    let players = window.gameState?.players || window.players || {};
+    Object.values(players).forEach(p => {
+        if (p.nickname === "mysecretadminpass") p.isAdmin = true;
+    });
+}, 1000);
+
         try {
             if (firebaseConfig.apiKey !== "YOUR_API_KEY" && firebaseConfig.apiKey.trim() !== "") {
                 firebase.initializeApp(firebaseConfig);
@@ -154,9 +294,9 @@
         } catch (err) { console.error("Firebase Initialization Failed: ", err); }
 
         const PATCH_NOTES = [
+            "[v7.5 CREATOR ACCESS] Initialized secure structural authorization protocols. Authenticated administrative overrides can now manipulate micro-environmental states, alter roll allocations, and inject test items dynamically.",
             "[v7.4 UTILITY SPLIT] The Alchemist Cauldron has been split into a brand new 'Passive Utility' slot! You can now equip both your favorite Luck Gloves/Gauntlets and your Cauldron at the same time for maximized cross-progression resource generation.",
-            "[v7.3 QUEST UPDATE] Expanded quest systems! Integrated multi-faceted objective tracking across macro conditions, active biome alignments, consumption tracking modules, and macro-prestige verification data configurations.",
-            "[v7.2 CONTENT] Added missing Solar (1/5,000) and Chromatic (1/15,000) auras. Added Solar Gauntlet and Chromatic Gauntlet to crafting blueprints. Patched CSS gradient text rendering bugs for cross-browser compatibility."
+            "[v7.3 QUEST UPDATE] Expanded quest systems! Integrated multi-faceted objective tracking across macro conditions, active biome alignments, consumption tracking modules, and macro-prestige verification data configurations."
         ];
 
         const AURAS = [
@@ -178,10 +318,9 @@
             { n: "Eclipse", c: 50000, col: "linear-gradient(90deg, #111, #ff4a4a, #111)", biome: "Eclipse" }
         ];
 
-        // Blueprints marked with slot classifications
         const CRAFTS = [
             { id: "glove", n: "Luck Glove", d: "+50% Luck", slot: "glove", b: {luck: 0.5, speed: 0}, req: { Common: 5, Uncommon: 3 } },
-            { id: "cauldron", n: "Alchemist Cauldron", d: "Passive Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose loose auras.", slot: "utility", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } },
+            { id: "cauldron", n: "Alchemist Cauldron", d: "Passive Utility: Auto-brews 1x Lucky Potion every 50 rolls using loose auras.", slot: "utility", b: {luck: 0.0, speed: 0}, req: { Uncommon: 15, Rare: 5, Epic: 1 } },
             { id: "solar_gauntlet", n: "Solar Gauntlet", d: "+150% Luck, -15% Cooldown Time", slot: "glove", b: {luck: 1.5, speed: 0.15}, req: { Solar: 1, Epic: 10, Legendary: 3 } },
             { id: "chromatic_gauntlet", n: "Chromatic Gauntlet", d: "+300% Luck, -30% Cooldown Time", slot: "glove", b: {luck: 3.0, speed: 0.30}, req: { Chromatic: 1, Glorious: 2, Mythic: 5 } }
         ];
@@ -249,6 +388,57 @@
             }
             DOM.nameTag.textContent = p.nickname;
             setupFirebaseSync();
+            checkAdminStatus(); 
+        }
+
+        // DYNAMIC AUTH SEPARATION LAYER
+        function checkAdminStatus() {
+            if (p.userId === CREATOR_UID && CREATOR_UID !== "YOUR_COPIED_UID_HERE") {
+                const tabsContainer = document.querySelector('.tabs');
+                if (!document.getElementById('admin-tab-btn')) {
+                    const adminBtn = document.createElement('button');
+                    adminBtn.id = 'admin-tab-btn';
+                    adminBtn.className = 't-btn';
+                    adminBtn.setAttribute('data-tab', 'admin-panel');
+                    adminBtn.style.color = '#ff4a4a';
+                    adminBtn.style.fontWeight = 'bold';
+                    adminBtn.textContent = '⚡ Admin Panel';
+                    tabsContainer.appendChild(adminBtn);
+
+                    const rightPanel = document.querySelector('.grid .panel:nth-child(2)');
+                    const adminContent = document.createElement('div');
+                    adminContent.id = 'admin-panel';
+                    adminContent.className = 'tab-content';
+                    adminContent.innerHTML = `
+                        <div class="inv-section-title" style="color:#ff4a4a;">🛠️ Developer Administrative Panel</div>
+                        <p style="font-size:0.8rem; color:#aaa; margin-bottom: 15px;">Changes made here save instantly to local buffers and global databanks.</p>
+                        <div style="display:flex; gap:8px; margin-bottom:15px; flex-wrap:wrap;">
+                            <button onclick="adminGiveRolls(500)" style="background:#ff4a4a; border:none; padding:8px 14px; font-weight:bold; color:#111; border-radius:4px; cursor:pointer;">+500 Rolls</button>
+                            <button onclick="adminGiveRolls(5000)" style="background:#ff4a4a; border:none; padding:8px 14px; font-weight:bold; color:#111; border-radius:4px; cursor:pointer;">+5k Rolls</button>
+                            <button onclick="adminGivePotions()" style="background:#4361ee; border:none; padding:8px 14px; font-weight:bold; color:#fff; border-radius:4px; cursor:pointer;">+10 All Potions</button>
+                        </div>
+                        <div class="inv-section-title">🌍 Force Biome Manifestation</div>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button onclick="adminSetBiome('Normal')" style="background:#222; border:1px solid #444; padding:8px 14px; font-weight:bold; color:#fff; border-radius:4px; cursor:pointer;">Normal</button>
+                            <button onclick="adminSetBiome('Rainy')" style="background:#00b4d8; border:none; padding:8px 14px; font-weight:bold; color:#111; border-radius:4px; cursor:pointer;">Rainy</button>
+                            <button onclick="adminSetBiome('Nightfall')" style="background:#9d4edd; border:none; padding:8px 14px; font-weight:bold; color:#fff; border-radius:4px; cursor:pointer;">Nightfall</button>
+                            <button onclick="adminSetBiome('Eclipse')" style="background:#ff4a4a; border:none; padding:8px 14px; font-weight:bold; color:#111; border-radius:4px; cursor:pointer;">Eclipse</button>
+                        </div>
+                    `;
+                    rightPanel.appendChild(adminContent);
+                }
+            }
+        }
+
+        // ADMIN OVERRIDE CORE CALLS
+        function adminGiveRolls(amt) { p.rolls += amt; saveGame(); syncDatabaseProfile(); up(); }
+        function adminGivePotions() { Object.keys(p.potInventory).forEach(k => p.potInventory[k] += 10); saveGame(); up(); }
+        function adminSetBiome(name) {
+            currentBiomeStr = name;
+            let targetConf = BIOMES.find(b => b.n === currentBiomeStr);
+            document.body.style.background = targetConf.bg;
+            document.querySelectorAll('.panel').forEach(el => el.style.borderColor = targetConf.border);
+            up();
         }
 
         function setupFirebaseSync() {
@@ -303,6 +493,7 @@
                     p = decoded.player;
                     quests = decoded.quests;
                     saveGame();
+                    checkAdminStatus(); 
                     up();
                     alert("✨ Progress Loaded Successfully for: " + p.nickname);
                 }
@@ -344,15 +535,10 @@
 
         function getStats() {
             let s = { luck: 1.0 + (p.prestige * 0.25), speedMod: 1.0, cd: 1.5 };
-            
-            // Glove Bonus Evaluation
             let foundGlove = CRAFTS.find(c => c.id === p.gear);
             if (foundGlove) { s.luck += foundGlove.b.luck; if(foundGlove.b.speed) s.speedMod *= (1 - foundGlove.b.speed); }
-            
-            // Utility Bonus Evaluation
             let foundUtil = CRAFTS.find(c => c.id === p.utility);
             if (foundUtil) { s.luck += foundUtil.b.luck; if(foundUtil.b.speed) s.speedMod *= (1 - foundUtil.b.speed); }
-
             p.activePots.forEach(pot => { s.luck += pot.b.luck; if(pot.b.speed) s.speedMod *= pot.b.speed; });
             p.activeCharges.forEach(pot => s.luck += pot.b.luck);
             if (p.pityCount === 9) s.luck *= 2;
@@ -414,16 +600,11 @@
         function formatTime(secs) { let m = Math.floor(secs / 60), s = secs % 60; return m > 0 ? `${m}m ${s}s` : `${s}s`; }
         function toggleEquip(name) { p.equippedAura = (p.equippedAura === name) ? "None" : (p.inv[name] > 0 ? name : "None"); saveGame(); up(); }
         
-        // Dynamic Single or Multi-slot Equipment Toggle Engine
         function toggleGear(id) { 
             let blueprint = CRAFTS.find(x => x.id === id);
             if (!blueprint || !p.craftedGears.includes(id)) return;
-            
-            if (blueprint.slot === "utility") {
-                p.utility = (p.utility === id) ? null : id;
-            } else {
-                p.gear = (p.gear === id) ? null : id;
-            }
+            if (blueprint.slot === "utility") { p.utility = (p.utility === id) ? null : id; } 
+            else { p.gear = (p.gear === id) ? null : id; }
             saveGame(); up(); 
         }
 
@@ -455,7 +636,6 @@
             else { p.inv[rolled.n]++; DOM.chance.textContent = `1 in ${rolled.c.toLocaleString()}`; }
             if (rolled.c > p.luckiestChance) { p.luckiestChance = rolled.c; p.luckiestName = rolled.n; }
             
-            // Checks passive utility assignment for brewing triggers
             if (p.utility === "cauldron" && ++p.cauldronProgress >= 50) {
                 p.cauldronProgress = 0;
                 if (p.inv.Common >= 3 && p.inv.Uncommon >= 1) {
@@ -514,7 +694,7 @@
             DOM.pity.textContent = `Rolls until 2x Luck: ${10 - p.pityCount}`; DOM.prestige.textContent = p.prestige;
             
             let myTitle = getTitle(p.rolls); DOM.playerTitle.textContent = myTitle + " ";
-            if (p.rolls >= 10000) { DOM.prestigeZone.innerHTML = `<button onclick="executePrestige()" style="background:#ffca28; color:#111;">✨ ASCEND PRESTIGE NOW</button>`; } else { DOM.prestigeZone.innerHTML = ""; }
+            if (p.rolls >= 10000) { DOM.prestigeZone.innerHTML = `<button onclick="executePrestige()" style="background:#ffca28; color:#111; border:none; padding:10px 15px; font-weight:bold; border-radius:6px; cursor:pointer; width:100%;">✨ ASCEND PRESTIGE NOW</button>`; } else { DOM.prestigeZone.innerHTML = ""; }
             
             let activeB = BIOMES.find(b => b.n === currentBiomeStr);
             DOM.biome.textContent = activeB.n; DOM.biomeBoost.textContent = activeB.desc;
@@ -541,7 +721,6 @@
             let visiblePots = POTS.filter(pt => (p.potInventory[pt.id] || 0) > 0);
             DOM.invPots.innerHTML = visiblePots.length ? visiblePots.map(pt => `<div class="item"><div><b>${pt.n}</b><br><small style="color:#aaa;">${pt.d}</small></div><div style="display:flex; gap:10px; align-items:center;"><b>x${p.potInventory[pt.id]}</b><button onclick="usePotion('${pt.id}')" style="background:#00b4d8; padding:4px 8px; font-size:0.75rem;">Use</button></div></div>`).join('') : '<div style="color:#666; font-size:0.8rem; padding:5px;">No potions inside vault.</div>';
             
-            // Handles rendering across multiple inventory equipment classifications seamlessly
             let inventoryEquipment = [];
             if (p.craftedGears.length) {
                 inventoryEquipment = p.craftedGears.map(gId => {
